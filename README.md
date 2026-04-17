@@ -1,1 +1,3 @@
-# Seminar_Nhom2
+# StormShield
+
+Monorepo for StormShield MVP
