@@ -5,7 +5,6 @@ services = [
     "auth-service",
     "shelter-service",
     "alert-service",
-    "report-service",
     "support-service",
     "notification-service"
 ]
@@ -36,7 +35,6 @@ springdoc.swagger-ui.path=/swagger-ui.html
         "auth-service": 8081,
         "shelter-service": 8082,
         "alert-service": 8083,
-        "report-service": 8084,
         "support-service": 8085,
         "notification-service": 8086
     }
@@ -150,17 +148,6 @@ services:
     container_name: alert-service
     ports:
       - "8083:8083"
-    networks:
-      - stormshield-net
-    depends_on:
-      mysql-db:
-        condition: service_healthy
-
-  report-service:
-    build: ./report-service
-    container_name: report-service
-    ports:
-      - "8084:8084"
     networks:
       - stormshield-net
     depends_on:

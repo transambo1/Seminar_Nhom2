@@ -1,9 +1,10 @@
 package com.stormshield.supportservice.service;
 
-import com.stormshield.supportservice.dto.RescueRequestResponse;
-import com.stormshield.supportservice.dto.SupportRequestAssign;
-import com.stormshield.supportservice.dto.SupportRequestCreate;
-import com.stormshield.supportservice.dto.SupportRequestStatusUpdate;
+import com.stormshield.supportservice.dto.response.RescueRequestResponse;
+import com.stormshield.supportservice.dto.request.SupportAssignRequest;
+import com.stormshield.supportservice.dto.request.SupportCreateRequest;
+import com.stormshield.supportservice.dto.request.SupportRequestFilterRequest;
+import com.stormshield.supportservice.dto.request.SupportStatusUpdateRequest;
 import com.stormshield.supportservice.entity.PriorityLevel;
 import com.stormshield.supportservice.entity.RequestStatus;
 import com.stormshield.supportservice.entity.RequestType;
@@ -25,7 +26,7 @@ public class RescueRequestService {
 
     private final RescueRequestRepository repository;
 
-    public RescueRequestResponse createRequest(SupportRequestCreate request) {
+    public RescueRequestResponse createRequest(SupportCreateRequest request) {
         RescueRequest rescueRequest = RescueRequest.builder()
                 .userId(request.getUserId())
                 .requestType(request.getRequestType())
@@ -53,9 +54,12 @@ public class RescueRequestService {
 
     public List<RescueRequestResponse> getAllRequests(RequestStatus status, PriorityLevel priority, RequestType type) {
         Specification<RescueRequest> spec = Specification.where(null);
-        if (status != null) spec = spec.and((rt, q, cb) -> cb.equal(rt.get("status"), status));
-        if (priority != null) spec = spec.and((rt, q, cb) -> cb.equal(rt.get("priorityLevel"), priority));
-        if (type != null) spec = spec.and((rt, q, cb) -> cb.equal(rt.get("requestType"), type));
+        if (status != null)
+            spec = spec.and((rt, q, cb) -> cb.equal(rt.get("status"), status));
+        if (priority != null)
+            spec = spec.and((rt, q, cb) -> cb.equal(rt.get("priorityLevel"), priority));
+        if (type != null)
+            spec = spec.and((rt, q, cb) -> cb.equal(rt.get("requestType"), type));
 
         return repository.findAll(spec).stream().map(this::mapToResponse).collect(Collectors.toList());
     }
@@ -64,28 +68,28 @@ public class RescueRequestService {
         return repository.findByStatus(status).stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
-    public RescueRequestResponse assignTeam(Long id, SupportRequestAssign assignDto) {
+    public RescueRequestResponse assignTeam(Long id, SupportAssignRequest assignDto) {
         RescueRequest req = repository.findById(id).orElseThrow(() -> new RuntimeException("Request not found"));
-        
+
         if (req.getStatus() != RequestStatus.PENDING) {
             throw new IllegalStateException("Can only assign a team to a PENDING request");
         }
-        
+
         req.setAssignedTeamId(assignDto.getAssignedTeamId());
         req.setStatus(RequestStatus.ASSIGNED);
-        
+
         RescueRequest updated = repository.save(req);
         publishNotification(updated, "ASSIGNED");
         return mapToResponse(updated);
     }
 
-    public RescueRequestResponse updateStatus(Long id, SupportRequestStatusUpdate updateDto) {
+    public RescueRequestResponse updateStatus(Long id, SupportStatusUpdateRequest updateDto) {
         RescueRequest req = repository.findById(id).orElseThrow(() -> new RuntimeException("Request not found"));
         RequestStatus oldStatus = req.getStatus();
         RequestStatus newStatus = updateDto.getStatus();
-        
+
         validateStatusTransition(oldStatus, newStatus);
-        
+
         req.setStatus(newStatus);
         RescueRequest updated = repository.save(req);
         publishNotification(updated, "STATUS_UPDATED");
@@ -93,7 +97,8 @@ public class RescueRequestService {
     }
 
     private void validateStatusTransition(RequestStatus oldStatus, RequestStatus newStatus) {
-        if (oldStatus == newStatus) return;
+        if (oldStatus == newStatus)
+            return;
 
         switch (oldStatus) {
             case PENDING:
@@ -115,8 +120,73 @@ public class RescueRequestService {
     }
 
     private void publishNotification(RescueRequest request, String eventAction) {
-        log.info("==> [MOCK NOTIFICATION PUBLISHER] Support Request ID {} {}, current status: {}", 
-            request.getId(), eventAction, request.getStatus());
+        log.info("==> [MOCK NOTIFICATION PUBLISHER] Support Request ID {} {}, current status: {}",
+                request.getId(), eventAction, request.getStatus());
+    }
+
+    public List<RescueRequestResponse> filterRequests(SupportRequestFilterRequest request) {
+
+        Specification<RescueRequest> spec = request.specification();
+List<RescueRequest> list = repository.findAll(spec);
+
+String normalizedSortBy = request.getSortBy() == null ? "CREATED_AT" : request.getSortBy().toUpperCase();
+String normalizedDirection = request.getDirection() == null ? "DESC" : request.getDirection().toUpperCase();
+
+boolean isAsc = "ASC".equals(normalizedDirection);
+Double userLat = request.getUserLat();
+Double userLng = request.getUserLng();
+
+        if ("DISTANCE".equals(normalizedSortBy)) {
+            if (userLat == null || userLng == null) {
+                throw new IllegalArgumentException("userLat and userLng are required when sortBy=DISTANCE");
+            }
+
+            list.sort((r1, r2) -> {
+                double d1 = calculateDistance(userLat, userLng, r1.getLatitude(), r1.getLongitude());
+                double d2 = calculateDistance(userLat, userLng, r2.getLatitude(), r2.getLongitude());
+                return isAsc ? Double.compare(d1, d2) : Double.compare(d2, d1);
+            });
+        } else {
+            list.sort((r1, r2) -> {
+                java.time.LocalDateTime t1 = r1.getCreatedAt();
+                java.time.LocalDateTime t2 = r2.getCreatedAt();
+                if (t1 == null || t2 == null)
+                    return 0;
+                return isAsc ? t1.compareTo(t2) : t2.compareTo(t1);
+            });
+        }
+
+        return list.stream().map(r -> {
+            RescueRequestResponse res = mapToResponse(r);
+            if (userLat != null && userLng != null && r.getLatitude() != null && r.getLongitude() != null) {
+                res.setDistance(calculateDistance(userLat, userLng, r.getLatitude(), r.getLongitude()));
+            }
+            return res;
+        }).collect(Collectors.toList());
+    }
+
+    private double calculateDistance(Double lat1, Double lon1, Double lat2, Double lon2) {
+        if (lat1 == null || lon1 == null || lat2 == null || lon2 == null)
+            return Double.MAX_VALUE;
+        final int R = 6371; // km
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                        * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c * 1000;
+    }
+
+    public com.stormshield.supportservice.dto.response.SupportStatisticsResponse getStatistics() {
+        return com.stormshield.supportservice.dto.response.SupportStatisticsResponse.builder()
+                .totalRequests(repository.count())
+                .pendingRequests(repository.countByStatus(RequestStatus.PENDING))
+                .assignedRequests(repository.countByStatus(RequestStatus.ASSIGNED))
+                .inProgressRequests(repository.countByStatus(RequestStatus.IN_PROGRESS))
+                .resolvedRequests(repository.countByStatus(RequestStatus.RESOLVED))
+                .cancelledRequests(repository.countByStatus(RequestStatus.CANCELLED))
+                .build();
     }
 
     private RescueRequestResponse mapToResponse(RescueRequest r) {

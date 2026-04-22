@@ -41,15 +41,15 @@ const ClusteredMarkers = ({ markers, onMarkerClick }) => {
         return new window.google.maps.marker.AdvancedMarkerElement({
           position,
           content: el,
-          zIndex: 1000 + count,
+          zIndex: 1000 + count
         });
-      },
+      }
     };
 
     clustererRef.current = new MarkerClusterer({
       map,
       algorithm: new SuperClusterAlgorithm({ radius: 100 }),
-      renderer: customRenderer,
+      renderer: customRenderer
     });
 
     return () => {
@@ -113,10 +113,21 @@ const ClusteredMarkers = ({ markers, onMarkerClick }) => {
 
 const ShelterPanner = ({ selectedShelter, onSelected }) => {
   const map = useMap();
+
   useEffect(() => {
-    if (map && selectedShelter && selectedShelter.latitude != null && selectedShelter.longitude != null) {
-      map.panTo({ lat: Number(selectedShelter.latitude), lng: Number(selectedShelter.longitude) });
+    if (
+      map &&
+      selectedShelter &&
+      selectedShelter.latitude != null &&
+      selectedShelter.longitude != null
+    ) {
+      map.panTo({
+        lat: Number(selectedShelter.latitude),
+        lng: Number(selectedShelter.longitude)
+      });
+
       map.setZoom(16);
+
       onSelected({
         ...selectedShelter,
         elementType: 'SHELTER',
@@ -125,6 +136,7 @@ const ShelterPanner = ({ selectedShelter, onSelected }) => {
       });
     }
   }, [map, selectedShelter, onSelected]);
+
   return null;
 };
 
@@ -163,10 +175,123 @@ const MyLocationButton = ({ myLocation }) => {
   );
 };
 
-const StormShieldMap = ({ shelters = [], reports = [], alerts = [], selectedShelter = null }) => {
+const getRadiusFromSeverity = (severityLevel) => {
+  switch (severityLevel) {
+    case 'CRITICAL':
+      return 700;
+    case 'HIGH':
+      return 500;
+    case 'MEDIUM':
+      return 350;
+    case 'LOW':
+      return 200;
+    default:
+      return 350;
+  }
+};
+
+const AlertDangerCircle = ({ lat, lng, radius }) => {
+  const map = useMap();
+  const circleRef = useRef(null);
+
+  useEffect(() => {
+    if (!map) return;
+
+    if (!circleRef.current) {
+      circleRef.current = new window.google.maps.Circle({
+        strokeColor: '#ef4444',
+        strokeOpacity: 0.85,
+        strokeWeight: 2,
+        fillColor: '#ef4444',
+        fillOpacity: 0.18
+      });
+    }
+
+    circleRef.current.setMap(map);
+    circleRef.current.setCenter({ lat, lng });
+    circleRef.current.setRadius(radius);
+
+    return () => {
+      if (circleRef.current) {
+        circleRef.current.setMap(null);
+      }
+    };
+  }, [map, lat, lng, radius]);
+
+  return null;
+};
+
+const MapDirectionsRenderer = ({ originLat, originLng, destLat, destLng }) => {
+  const map = useMap();
+  const rendererRef = useRef(null);
+
+  useEffect(() => {
+    if (!map || !originLat || !originLng || !destLat || !destLng) {
+      if (rendererRef.current) {
+        rendererRef.current.setMap(null);
+        rendererRef.current = null;
+      }
+      return;
+    }
+
+    if (!rendererRef.current) {
+      rendererRef.current = new window.google.maps.DirectionsRenderer({
+        map,
+        suppressMarkers: false,
+        polylineOptions: {
+          strokeColor: '#2563eb',
+          strokeWeight: 6,
+          strokeOpacity: 0.7
+        }
+      });
+    } else {
+      rendererRef.current.setMap(map);
+    }
+
+    const ds = new window.google.maps.DirectionsService();
+    ds.route(
+      {
+        origin: { lat: originLat, lng: originLng },
+        destination: { lat: destLat, lng: destLng },
+        travelMode: window.google.maps.TravelMode.DRIVING
+      },
+      (res, status) => {
+        if (status === 'OK' && rendererRef.current) {
+          rendererRef.current.setDirections(res);
+        } else {
+          console.error("Directions request failed:", status);
+        }
+      }
+    );
+
+    return () => {
+      // Clean up map route when coordinates change or unmount
+      if (rendererRef.current) {
+        rendererRef.current.setMap(null);
+      }
+    };
+  }, [map, originLat, originLng, destLat, destLng]);
+
+  return null;
+};
+
+const StormShieldMap = ({
+  shelters = [],
+  alerts = [],
+  selectedShelter = null,
+  initialRoutingDestination = null
+}) => {
   const [initialCenter, setInitialCenter] = useState(null);
   const [myLocation, setMyLocation] = useState(null);
   const [selectedElement, setSelectedElement] = useState(null);
+  const [currentZoom, setCurrentZoom] = useState(13);
+  const [routingDestination, setRoutingDestination] = useState(initialRoutingDestination || null);
+
+  useEffect(() => {
+    if (initialRoutingDestination) {
+      setRoutingDestination(initialRoutingDestination);
+    }
+  }, [initialRoutingDestination]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -180,6 +305,7 @@ const StormShieldMap = ({ shelters = [], reports = [], alerts = [], selectedShel
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
+
         setMyLocation(loc);
         setInitialCenter(loc);
       },
@@ -196,40 +322,43 @@ const StormShieldMap = ({ shelters = [], reports = [], alerts = [], selectedShel
   }, []);
 
   const handleMarkerClick = (element, type) => {
-    setSelectedElement({ ...element, elementType: type });
+    setSelectedElement({
+      ...element,
+      elementType: type
+    });
   };
 
   const shelterMarkers = useMemo(() => {
-    return shelters
-      .filter((s) => s.latitude != null && s.longitude != null)
-      .map((s) => ({
-        key: `s-${s.id}`,
-        lat: Number(s.latitude),
-        lng: Number(s.longitude),
-        data: s,
-        type: 'SHELTER',
-        pin: <div className="marker-shelter-pulse"></div>
-      }));
-  }, [shelters]);
-
-  const reportMarkers = useMemo(() => {
-    return reports
-      .filter((r) => r.latitude != null && r.longitude != null)
-      .map((r) => ({
-        key: `r-${r.id}`,
-        lat: Number(r.latitude),
-        lng: Number(r.longitude),
-        data: r,
-        type: 'REPORT',
-        pin: (
-          <Pin
-            background="#F59E0B"
-            borderColor="#92400E"
-            glyphColor="#FFFFFF"
-          />
-        )
-      }));
-  }, [reports]);
+  return shelters
+    .filter((s) => s.latitude != null && s.longitude != null)
+    .map((s) => ({
+      key: `s-${s.id}`,
+      lat: Number(s.latitude),
+      lng: Number(s.longitude),
+      data: s,
+      type: 'SHELTER',
+      pin: (
+        <div
+            style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '50%',
+              background: '#10B981',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold',
+              fontSize: '18px',
+              border: '3px solid #fff',
+              boxShadow: '0 4px 12px rgba(57, 199, 83, 0.5)'
+            }}
+          >
+          +
+        </div>
+      )
+    }));
+}, [shelters]);
 
   const alertMarkers = useMemo(() => {
     return alerts
@@ -240,7 +369,26 @@ const StormShieldMap = ({ shelters = [], reports = [], alerts = [], selectedShel
         lng: Number(a.longitude),
         data: a,
         type: 'ALERT',
-        pin: <div className="marker-alert-pulse">!</div>
+        pin: (
+          <div
+            style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '50%',
+              background: '#ef4444',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold',
+              fontSize: '18px',
+              border: '3px solid #fff',
+              boxShadow: '0 4px 12px rgba(239,68,68,0.5)'
+            }}
+          >
+            !
+          </div>
+        )
       }));
   }, [alerts]);
 
@@ -289,34 +437,38 @@ const StormShieldMap = ({ shelters = [], reports = [], alerts = [], selectedShel
           mapId="DEMO_MAP_ID"
           gestureHandling="greedy"
           disableDefaultUI={false}
+          onCameraChanged={(ev) => {
+            setCurrentZoom(ev.detail.zoom);
+          }}
         >
-          {/* Clustered Shelters */}
           <ClusteredMarkers
             key={`shelter-cluster-${shelterMarkers.length}`}
             markers={shelterMarkers}
             onMarkerClick={handleMarkerClick}
           />
 
-          {/* Independent Static Markers (Not clustered to remain highly visible) */}
-          {reportMarkers.map((marker) => (
-            <AdvancedMarker
-              key={marker.key}
-              position={{ lat: marker.lat, lng: marker.lng }}
-              onClick={() => handleMarkerClick(marker.data, marker.type)}
-            >
-              {marker.pin}
-            </AdvancedMarker>
-          ))}
+          <ClusteredMarkers
+            key={`alert-cluster-${alertMarkers.length}`}
+            markers={alertMarkers}
+            onMarkerClick={handleMarkerClick}
+          />
 
-          {alertMarkers.map((marker) => (
-            <AdvancedMarker
-              key={marker.key}
-              position={{ lat: marker.lat, lng: marker.lng }}
-              onClick={() => handleMarkerClick(marker.data, marker.type)}
-            >
-              {marker.pin}
-            </AdvancedMarker>
-          ))}
+          {currentZoom >= 14 &&
+            alertMarkers.map((marker) => (
+              <AlertDangerCircle
+                key={`danger-zone-${marker.key}`}
+                lat={marker.lat}
+                lng={marker.lng}
+                radius={getRadiusFromSeverity(marker.data.severityLevel)}
+              />
+            ))}
+
+          <MapDirectionsRenderer
+            originLat={myLocation?.lat}
+            originLng={myLocation?.lng}
+            destLat={routingDestination?.lat}
+            destLng={routingDestination?.lng}
+          />
 
           {myLocation && (
             <AdvancedMarker
@@ -342,14 +494,23 @@ const StormShieldMap = ({ shelters = [], reports = [], alerts = [], selectedShel
 
           <MyLocationButton myLocation={myLocation} />
 
-          <ShelterPanner selectedShelter={selectedShelter} onSelected={setSelectedElement} />
+          <ShelterPanner
+            selectedShelter={selectedShelter}
+            onSelected={setSelectedElement}
+          />
 
           {selectedElement && infoPosition && (
             <InfoWindow
               position={infoPosition}
               onCloseClick={() => setSelectedElement(null)}
             >
-              <div style={{ padding: '4px', maxWidth: '220px', lineHeight: 1.5 }}>
+              <div
+                style={{
+                  padding: '4px',
+                  maxWidth: '220px',
+                  lineHeight: 1.5
+                }}
+              >
                 {selectedElement.elementType === 'USER' && (
                   <strong style={{ color: '#2563EB' }}>
                     {selectedElement.title}
@@ -368,18 +529,45 @@ const StormShieldMap = ({ shelters = [], reports = [], alerts = [], selectedShel
                     <br />
                     Sức chứa: {selectedElement.currentOccupancy}/
                     {selectedElement.capacity}
-                  </div>
-                )}
 
-                {selectedElement.elementType === 'REPORT' && (
-                  <div>
-                    <strong style={{ color: '#F59E0B' }}>
-                      NGUY HIỂM: {selectedElement.reportType}
-                    </strong>
-                    <br />
-                    Mức độ: {selectedElement.dangerLevel}
-                    <br />
-                    Chi tiết: {selectedElement.description}
+                    <button
+                      onClick={() => setRoutingDestination({ lat: Number(selectedElement.latitude), lng: Number(selectedElement.longitude) })}
+                      style={{
+                        display: 'block',
+                        marginTop: '10px',
+                        background: '#103ab9ff',
+                        color: 'white',
+                        border: 'none',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        width: '100%',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      Đường đi
+                    </button>
+                    {routingDestination && routingDestination.lat === Number(selectedElement.latitude) && (
+                      <button
+                        onClick={() => setRoutingDestination(null)}
+                        style={{
+                          display: 'block',
+                          marginTop: '4px',
+                          background: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 'bold',
+                          width: '100%',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        Huỷ
+                      </button>
+                    )}
                   </div>
                 )}
 

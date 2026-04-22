@@ -14,7 +14,6 @@
         <module>auth-service</module>
         <module>shelter-service</module>
         <module>alert-service</module>
-        <module>report-service</module>
         <module>support-service</module>
         <module>notification-service</module>
     </modules>

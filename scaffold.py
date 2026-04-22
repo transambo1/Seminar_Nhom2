@@ -7,7 +7,6 @@ services = [
     "auth-service",
     "shelter-service",
     "alert-service",
-    "report-service",
     "support-service",
     "notification-service"
 ]

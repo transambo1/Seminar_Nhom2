@@ -1,8 +1,8 @@
 package com.stormshield.notificationservice.controller;
 
-import com.stormshield.notificationservice.dto.NotificationCreateRequest;
-import com.stormshield.notificationservice.dto.NotificationResponse;
-import com.stormshield.notificationservice.dto.UnreadCountResponse;
+import com.stormshield.notificationservice.dto.request.NotificationCreateRequest;
+import com.stormshield.notificationservice.dto.response.NotificationResponse;
+import com.stormshield.notificationservice.dto.response.UnreadCountResponse;
 import com.stormshield.notificationservice.service.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

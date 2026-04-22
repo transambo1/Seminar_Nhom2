@@ -46,7 +46,6 @@ services_to_suppress = [
     r"d:\Seminar_Nhom2\alert-service\src\main\java\com\stormshield\alertservice\service\AlertService.java",
     r"d:\Seminar_Nhom2\auth-service\src\main\java\com\stormshield\authservice\service\AuthService.java",
     r"d:\Seminar_Nhom2\notification-service\src\main\java\com\stormshield\notificationservice\service\NotificationService.java",
-    r"d:\Seminar_Nhom2\report-service\src\main\java\com\stormshield\reportservice\service\ReportService.java",
     r"d:\Seminar_Nhom2\shelter-service\src\main\java\com\stormshield\shelterservice\service\ShelterService.java",
     r"d:\Seminar_Nhom2\support-service\src\main\java\com\stormshield\supportservice\service\RescueRequestService.java"
 ]

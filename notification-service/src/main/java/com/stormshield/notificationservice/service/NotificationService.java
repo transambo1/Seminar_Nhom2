@@ -1,8 +1,8 @@
 package com.stormshield.notificationservice.service;
 
-import com.stormshield.notificationservice.dto.NotificationCreateRequest;
-import com.stormshield.notificationservice.dto.NotificationResponse;
-import com.stormshield.notificationservice.dto.UnreadCountResponse;
+import com.stormshield.notificationservice.dto.request.NotificationCreateRequest;
+import com.stormshield.notificationservice.dto.response.NotificationResponse;
+import com.stormshield.notificationservice.dto.response.UnreadCountResponse;
 import com.stormshield.notificationservice.entity.Notification;
 import com.stormshield.notificationservice.repository.NotificationRepository;
 import jakarta.transaction.Transactional;

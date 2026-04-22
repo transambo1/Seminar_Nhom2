@@ -1,9 +1,9 @@
 package com.stormshield.authservice.service;
 
-import com.stormshield.authservice.dto.AuthResponse;
-import com.stormshield.authservice.dto.LoginRequest;
-import com.stormshield.authservice.dto.RegisterRequest;
-import com.stormshield.authservice.dto.UserDto;
+import com.stormshield.authservice.dto.response.AuthResponse;
+import com.stormshield.authservice.dto.request.LoginRequest;
+import com.stormshield.authservice.dto.request.RegisterRequest;
+import com.stormshield.authservice.dto.response.UserResponse;
 import com.stormshield.authservice.entity.User;
 import com.stormshield.authservice.entity.UserRole;
 import com.stormshield.authservice.entity.UserStatus;
@@ -44,7 +44,7 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        UserDto userDto = UserDto.builder()
+        UserResponse userDto = UserResponse.builder()
                 .id(savedUser.getId())
                 .fullName(savedUser.getFullName())
                 .email(savedUser.getEmail())
@@ -71,7 +71,7 @@ public class AuthService {
 
         String token = jwtUtils.generateToken(user.getEmail(), user.getRole().name());
 
-        UserDto userDto = UserDto.builder()
+        UserResponse userDto = UserResponse.builder()
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
@@ -85,11 +85,11 @@ public class AuthService {
                 .build();
     }
 
-    public UserDto getCurrentUser(String email) {
+    public UserResponse getCurrentUser(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return UserDto.builder()
+        return UserResponse.builder()
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())

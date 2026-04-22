@@ -1,5 +1,5 @@
 package com.stormshield.supportservice.entity;
 
 public enum PriorityLevel {
-    NORMAL, URGENT, CRITICAL
+    CRITICAL, HIGH, MEDIUM, LOW
 }

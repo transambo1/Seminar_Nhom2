@@ -1,9 +1,9 @@
 package com.stormshield.authservice.controller;
 
-import com.stormshield.authservice.dto.AuthResponse;
-import com.stormshield.authservice.dto.LoginRequest;
-import com.stormshield.authservice.dto.RegisterRequest;
-import com.stormshield.authservice.dto.UserDto;
+import com.stormshield.authservice.dto.response.AuthResponse;
+import com.stormshield.authservice.dto.request.LoginRequest;
+import com.stormshield.authservice.dto.request.RegisterRequest;
+import com.stormshield.authservice.dto.response.UserResponse;
 import com.stormshield.authservice.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,7 +35,7 @@ public class AuthController {
 
     @GetMapping("/me")
     @Operation(summary = "Get current logged-in user info")
-    public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
+    public ResponseEntity<UserResponse> getCurrentUser(Authentication authentication) {
         return ResponseEntity.ok(authService.getCurrentUser(authentication.getName()));
     }
 }

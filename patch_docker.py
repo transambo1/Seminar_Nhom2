@@ -7,7 +7,6 @@ services = {
     "auth-service": 8081,
     "shelter-service": 8082,
     "alert-service": 8083,
-    "report-service": 8084,
     "support-service": 8085,
     "notification-service": 8086
 }

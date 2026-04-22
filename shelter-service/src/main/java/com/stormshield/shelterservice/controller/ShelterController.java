@@ -1,8 +1,8 @@
 package com.stormshield.shelterservice.controller;
 
-import com.stormshield.shelterservice.dto.OccupancyRequest;
-import com.stormshield.shelterservice.dto.ShelterRequest;
-import com.stormshield.shelterservice.dto.ShelterResponse;
+import com.stormshield.shelterservice.dto.request.OccupancyUpdateRequest;
+import com.stormshield.shelterservice.dto.request.ShelterCreateRequest;
+import com.stormshield.shelterservice.dto.response.ShelterResponse;
 import com.stormshield.shelterservice.entity.ShelterStatus;
 import com.stormshield.shelterservice.service.ShelterService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,13 +25,13 @@ public class ShelterController {
 
     @PostMapping
     @Operation(summary = "Create a new shelter")
-    public ResponseEntity<ShelterResponse> createShelter(@Valid @RequestBody ShelterRequest request) {
+    public ResponseEntity<ShelterResponse> createShelter(@Valid @RequestBody ShelterCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(shelterService.createShelter(request));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update shelter information")
-    public ResponseEntity<ShelterResponse> updateShelter(@PathVariable Long id, @Valid @RequestBody ShelterRequest request) {
+    public ResponseEntity<ShelterResponse> updateShelter(@PathVariable Long id, @Valid @RequestBody ShelterCreateRequest request) {
         return ResponseEntity.ok(shelterService.updateShelter(id, request));
     }
 
@@ -49,7 +49,7 @@ public class ShelterController {
 
     @PatchMapping("/{id}/occupancy")
     @Operation(summary = "Update occupancy for a shelter")
-    public ResponseEntity<ShelterResponse> updateOccupancy(@PathVariable Long id, @Valid @RequestBody OccupancyRequest request) {
+    public ResponseEntity<ShelterResponse> updateOccupancy(@PathVariable Long id, @Valid @RequestBody OccupancyUpdateRequest request) {
         return ResponseEntity.ok(shelterService.updateOccupancy(id, request));
     }
 

@@ -14,4 +14,7 @@ public interface AlertRepository extends JpaRepository<Alert, Long>, JpaSpecific
     
     @Query("SELECT a FROM Alert a WHERE a.status = 'ACTIVE' AND a.startTime <= :now AND a.endTime >= :now")
     List<Alert> findActiveAndValidAlerts(LocalDateTime now);
+
+    long countByStatus(com.stormshield.alertservice.entity.AlertStatus status);
+    long countBySeverityLevel(com.stormshield.alertservice.entity.SeverityLevel severityLevel);
 }

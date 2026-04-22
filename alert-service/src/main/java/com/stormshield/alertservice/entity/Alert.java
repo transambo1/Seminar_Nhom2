@@ -36,6 +36,13 @@ public class Alert {
     @Column(nullable = false)
     private String affectedArea;
 
+    @Column(nullable = true)
+    private Double latitude;
+
+    @Column(nullable = true)
+    private Double longitude;
+
+
     @Column(nullable = false)
     private LocalDateTime startTime;
 

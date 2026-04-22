@@ -1,8 +1,8 @@
 package com.stormshield.alertservice.controller;
 
-import com.stormshield.alertservice.dto.AlertRequest;
-import com.stormshield.alertservice.dto.AlertResponse;
-import com.stormshield.alertservice.dto.AlertStatusRequest;
+import com.stormshield.alertservice.dto.request.AlertCreateRequest;
+import com.stormshield.alertservice.dto.response.AlertResponse;
+import com.stormshield.alertservice.dto.request.AlertStatusUpdateRequest;
 import com.stormshield.alertservice.entity.AlertStatus;
 import com.stormshield.alertservice.entity.AlertType;
 import com.stormshield.alertservice.entity.SeverityLevel;
@@ -27,7 +27,7 @@ public class AlertController {
 
     @PostMapping
     @Operation(summary = "Create a new alert")
-    public ResponseEntity<AlertResponse> createAlert(@Valid @RequestBody AlertRequest request) {
+    public ResponseEntity<AlertResponse> createAlert(@Valid @RequestBody AlertCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(alertService.createAlert(request));
     }
 
@@ -48,7 +48,7 @@ public class AlertController {
 
     @PatchMapping("/{id}/status")
     @Operation(summary = "Update alert status")
-    public ResponseEntity<AlertResponse> updateAlertStatus(@PathVariable Long id, @Valid @RequestBody AlertStatusRequest request) {
+    public ResponseEntity<AlertResponse> updateAlertStatus(@PathVariable Long id, @Valid @RequestBody AlertStatusUpdateRequest request) {
         return ResponseEntity.ok(alertService.updateAlertStatus(id, request));
     }
 
@@ -56,5 +56,11 @@ public class AlertController {
     @Operation(summary = "Get currently active and valid alerts")
     public ResponseEntity<List<AlertResponse>> getActiveAlerts() {
         return ResponseEntity.ok(alertService.getCurrentlyActiveAlerts());
+    }
+
+    @GetMapping("/statistics")
+    @Operation(summary = "Get overall alert statistics")
+    public ResponseEntity<com.stormshield.alertservice.dto.response.AlertStatisticsResponse> getStatistics() {
+        return ResponseEntity.ok(alertService.getStatistics());
     }
 }

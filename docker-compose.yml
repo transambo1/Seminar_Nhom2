@@ -90,17 +90,6 @@ services:
       mysql-db:
         condition: service_healthy
 
-  report-service:
-    build: ./report-service
-    container_name: report-service
-    ports:
-      - "8084:8084"
-    networks:
-      - stormshield-net
-    depends_on:
-      mysql-db:
-        condition: service_healthy
-
   support-service:
     build: ./support-service
     container_name: support-service

@@ -1,8 +1,8 @@
 package com.stormshield.shelterservice.service;
 
-import com.stormshield.shelterservice.dto.OccupancyRequest;
-import com.stormshield.shelterservice.dto.ShelterRequest;
-import com.stormshield.shelterservice.dto.ShelterResponse;
+import com.stormshield.shelterservice.dto.request.OccupancyUpdateRequest;
+import com.stormshield.shelterservice.dto.request.ShelterCreateRequest;
+import com.stormshield.shelterservice.dto.response.ShelterResponse;
 import com.stormshield.shelterservice.entity.Shelter;
 import com.stormshield.shelterservice.entity.ShelterStatus;
 import com.stormshield.shelterservice.repository.ShelterRepository;
@@ -19,7 +19,7 @@ public class ShelterService {
 
     private final ShelterRepository shelterRepository;
 
-    public ShelterResponse createShelter(ShelterRequest request) {
+    public ShelterResponse createShelter(ShelterCreateRequest request) {
         Shelter shelter = Shelter.builder()
                 .name(request.getName())
                 .address(request.getAddress())
@@ -35,7 +35,7 @@ public class ShelterService {
         return mapToResponse(shelterRepository.save(shelter));
     }
 
-    public ShelterResponse updateShelter(Long id, ShelterRequest request) {
+    public ShelterResponse updateShelter(Long id, ShelterCreateRequest request) {
         Shelter shelter = shelterRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Shelter not found"));
 
@@ -68,7 +68,7 @@ public class ShelterService {
         return mapToResponse(shelter);
     }
 
-    public ShelterResponse updateOccupancy(Long id, OccupancyRequest request) {
+    public ShelterResponse updateOccupancy(Long id, OccupancyUpdateRequest request) {
         Shelter shelter = shelterRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Shelter not found"));
 

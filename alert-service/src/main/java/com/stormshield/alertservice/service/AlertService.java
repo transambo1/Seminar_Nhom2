@@ -1,8 +1,8 @@
 package com.stormshield.alertservice.service;
 
-import com.stormshield.alertservice.dto.AlertRequest;
-import com.stormshield.alertservice.dto.AlertResponse;
-import com.stormshield.alertservice.dto.AlertStatusRequest;
+import com.stormshield.alertservice.dto.request.AlertCreateRequest;
+import com.stormshield.alertservice.dto.response.AlertResponse;
+import com.stormshield.alertservice.dto.request.AlertStatusUpdateRequest;
 import com.stormshield.alertservice.entity.Alert;
 import com.stormshield.alertservice.entity.AlertStatus;
 import com.stormshield.alertservice.entity.AlertType;
@@ -25,7 +25,7 @@ public class AlertService {
 
     private final AlertRepository alertRepository;
 
-    public AlertResponse createAlert(AlertRequest request) {
+    public AlertResponse createAlert(AlertCreateRequest request) {
         if (!request.isValidTimeRange()) {
             throw new RuntimeException("End time must be after start time");
         }
@@ -36,6 +36,8 @@ public class AlertService {
                 .alertType(request.getAlertType())
                 .severityLevel(request.getSeverityLevel())
                 .affectedArea(request.getAffectedArea())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .issuedBy(request.getIssuedBy())
@@ -73,7 +75,7 @@ public class AlertService {
         return mapToResponse(alert);
     }
 
-    public AlertResponse updateAlertStatus(Long id, AlertStatusRequest request) {
+    public AlertResponse updateAlertStatus(Long id, AlertStatusUpdateRequest request) {
         Alert alert = alertRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Alert not found"));
         alert.setStatus(request.getStatus());
@@ -91,6 +93,19 @@ public class AlertService {
         log.info("==> [MOCK NOTIFICATION PUBLISHER] Dispatched New Alert Notification for: {}", alert.getTitle());
     }
 
+    public com.stormshield.alertservice.dto.response.AlertStatisticsResponse getStatistics() {
+        return com.stormshield.alertservice.dto.response.AlertStatisticsResponse.builder()
+                .totalAlerts(alertRepository.count())
+                .activeAlerts(alertRepository.countByStatus(AlertStatus.ACTIVE))
+                .expiredAlerts(alertRepository.countByStatus(AlertStatus.EXPIRED))
+                .cancelledAlerts(alertRepository.countByStatus(AlertStatus.CANCELLED))
+                .criticalAlerts(alertRepository.countBySeverityLevel(SeverityLevel.CRITICAL))
+                .highAlerts(alertRepository.countBySeverityLevel(SeverityLevel.HIGH))
+                .mediumAlerts(alertRepository.countBySeverityLevel(SeverityLevel.MEDIUM))
+                .lowAlerts(alertRepository.countBySeverityLevel(SeverityLevel.LOW))
+                .build();
+    }
+
     private AlertResponse mapToResponse(Alert alert) {
         return AlertResponse.builder()
                 .id(alert.getId())
@@ -99,6 +114,8 @@ public class AlertService {
                 .alertType(alert.getAlertType())
                 .severityLevel(alert.getSeverityLevel())
                 .affectedArea(alert.getAffectedArea())
+                .latitude(alert.getLatitude())
+                .longitude(alert.getLongitude())
                 .startTime(alert.getStartTime())
                 .endTime(alert.getEndTime())
                 .issuedBy(alert.getIssuedBy())

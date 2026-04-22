@@ -78,9 +78,7 @@ spring.cloud.gateway.routes[2].id=alert-service
 spring.cloud.gateway.routes[2].uri=lb://alert-service
 spring.cloud.gateway.routes[2].predicates[0]=Path=/api/v1/alerts/**
 
-spring.cloud.gateway.routes[3].id=report-service
-spring.cloud.gateway.routes[3].uri=lb://report-service
-spring.cloud.gateway.routes[3].predicates[0]=Path=/api/v1/reports/**
+
 
 spring.cloud.gateway.routes[4].id=support-service
 spring.cloud.gateway.routes[4].uri=lb://support-service
