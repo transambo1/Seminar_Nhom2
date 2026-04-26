@@ -1,0 +1,12 @@
+{
+  "name": "stormshield-smoke-tests",
+  "version": "1.0.0",
+  "description": "Backend smoke tests for StormShield microservices",
+  "main": "stormshield-smoke-test.js",
+  "scripts": {
+    "test": "node stormshield-smoke-test.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.2"
+  }
+}

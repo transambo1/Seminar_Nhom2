@@ -9,12 +9,12 @@
     <packaging>pom</packaging>
     
     <modules>
-        <module>discovery-service</module>
-        <module>gateway-service</module>
-        <module>auth-service</module>
-        <module>shelter-service</module>
-        <module>alert-service</module>
-        <module>support-service</module>
-        <module>notification-service</module>
+        <module>backend/discovery-service</module>
+        <module>backend/gateway-service</module>
+        <module>backend/auth-service</module>
+        <module>backend/shelter-service</module>
+        <module>backend/alert-service</module>
+        <module>backend/support-service</module>
+        <module>backend/notification-service</module>
     </modules>
 </project>

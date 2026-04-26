@@ -11,6 +11,51 @@ import { MarkerClusterer, SuperClusterAlgorithm } from '@googlemaps/markercluste
 
 const FALLBACK_LOCATION = { lat: 10.8231, lng: 106.6297 };
 
+const isValidCoordinate = (alert) => {
+  if (alert.latitude == null || alert.longitude == null) return false;
+  const lat = Number(alert.latitude);
+  const lng = Number(alert.longitude);
+  return !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+};
+
+const isAlertInsideBounds = (alert, bounds) => {
+  if (!bounds) return true;
+  const lat = Number(alert.latitude);
+  const lng = Number(alert.longitude);
+  return lat >= bounds.south && lat <= bounds.north && lng >= bounds.west && lng <= bounds.east;
+};
+
+const getSeverityRank = (severityLevel) => {
+  switch (severityLevel) {
+    case 'CRITICAL': return 4;
+    case 'HIGH': return 3;
+    case 'MEDIUM': return 2;
+    case 'LOW': return 1;
+    default: return 0;
+  }
+};
+
+const getRenderableAlerts = (alerts, bounds) => {
+  const validAlerts = alerts.filter(isValidCoordinate);
+  
+  let visibleAlerts = validAlerts;
+  if (bounds) {
+    visibleAlerts = validAlerts.filter(a => isAlertInsideBounds(a, bounds));
+  }
+  
+  const sortedAlerts = visibleAlerts.sort((a, b) => {
+    const rankDiff = getSeverityRank(b.severityLevel) - getSeverityRank(a.severityLevel);
+    if (rankDiff !== 0) return rankDiff;
+    const timeA = new Date(a.startTime || a.createdAt).getTime();
+    const timeB = new Date(b.startTime || b.createdAt).getTime();
+    return timeB - timeA;
+  });
+  
+  const renderableAlerts = sortedAlerts.slice(0, 300);
+  
+  return { validAlerts, renderableAlerts };
+};
+
 const ClusteredMarkers = ({ markers, onMarkerClick }) => {
   const map = useMap();
   const clustererRef = useRef(null);
@@ -285,6 +330,7 @@ const StormShieldMap = ({
   const [myLocation, setMyLocation] = useState(null);
   const [selectedElement, setSelectedElement] = useState(null);
   const [currentZoom, setCurrentZoom] = useState(13);
+  const [mapBounds, setMapBounds] = useState(null);
   const [routingDestination, setRoutingDestination] = useState(initialRoutingDestination || null);
 
   useEffect(() => {
@@ -361,9 +407,9 @@ const StormShieldMap = ({
 }, [shelters]);
 
   const alertMarkers = useMemo(() => {
-    return alerts
-      .filter((a) => a.latitude != null && a.longitude != null)
-      .map((a) => ({
+    const { renderableAlerts } = getRenderableAlerts(alerts, mapBounds);
+    
+    return renderableAlerts.map((a) => ({
         key: `a-${a.id}`,
         lat: Number(a.latitude),
         lng: Number(a.longitude),
@@ -390,7 +436,18 @@ const StormShieldMap = ({
           </div>
         )
       }));
-  }, [alerts]);
+  }, [alerts, mapBounds]);
+
+  useEffect(() => {
+    if (alerts.length > 0 || shelters.length > 0) {
+      const { validAlerts, renderableAlerts } = getRenderableAlerts(alerts, mapBounds);
+      console.log("alerts from API:", alerts.length);
+      console.log("valid alerts:", validAlerts.length);
+      console.log("rendered alerts:", renderableAlerts.length);
+      console.log("shelters from API:", shelters.length);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alerts, shelters]); // only log when data changes, not bounds
 
   const infoPosition = selectedElement
     ? {
@@ -440,6 +497,9 @@ const StormShieldMap = ({
           onCameraChanged={(ev) => {
             setCurrentZoom(ev.detail.zoom);
           }}
+          onBoundsChanged={(ev) => {
+            setMapBounds(ev.detail.bounds);
+          }}
         >
           <ClusteredMarkers
             key={`shelter-cluster-${shelterMarkers.length}`}
@@ -447,11 +507,15 @@ const StormShieldMap = ({
             onMarkerClick={handleMarkerClick}
           />
 
-          <ClusteredMarkers
-            key={`alert-cluster-${alertMarkers.length}`}
-            markers={alertMarkers}
-            onMarkerClick={handleMarkerClick}
-          />
+          {alertMarkers.map((marker) => (
+            <AdvancedMarker
+              key={marker.key}
+              position={{ lat: marker.lat, lng: marker.lng }}
+              onClick={() => handleMarkerClick(marker.data, marker.type)}
+            >
+              {marker.pin}
+            </AdvancedMarker>
+          ))}
 
           {currentZoom >= 14 &&
             alertMarkers.map((marker) => (

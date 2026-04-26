@@ -4,8 +4,20 @@ networks:
 
 services:
   # ----------------------------------------
-  # INFRASTRUCTURE DATABASES
+  # INFRASTRUCTURE DATABASES & BROKER
   # ----------------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - stormshield-net
+
   mysql-db:
     image: mysql:8.0
     container_name: stormshield-mysql
@@ -29,7 +41,7 @@ services:
   # DISCOVERY & REGISTRY REGION
   # ----------------------------------------
   discovery-service:
-    build: ./discovery-service
+    build: ./backend/discovery-service
     container_name: discovery-service
     ports:
       - "8761:8761"
@@ -45,7 +57,7 @@ services:
   # API GATEWAY
   # ----------------------------------------
   gateway-service:
-    build: ./gateway-service
+    build: ./backend/gateway-service
     container_name: gateway-service
     ports:
       - "8080:8080"
@@ -58,7 +70,7 @@ services:
   # BUSINESS MICROSERVICES
   # ----------------------------------------
   auth-service:
-    build: ./auth-service
+    build: ./backend/auth-service
     container_name: auth-service
     ports:
       - "8081:8081"
@@ -69,7 +81,7 @@ services:
         condition: service_healthy
 
   shelter-service:
-    build: ./shelter-service
+    build: ./backend/shelter-service
     container_name: shelter-service
     ports:
       - "8082:8082"
@@ -80,7 +92,7 @@ services:
         condition: service_healthy
 
   alert-service:
-    build: ./alert-service
+    build: ./backend/alert-service
     container_name: alert-service
     ports:
       - "8083:8083"
@@ -91,7 +103,7 @@ services:
         condition: service_healthy
 
   support-service:
-    build: ./support-service
+    build: ./backend/support-service
     container_name: support-service
     ports:
       - "8085:8085"
@@ -102,7 +114,7 @@ services:
         condition: service_healthy
 
   notification-service:
-    build: ./notification-service
+    build: ./backend/notification-service
     container_name: notification-service
     ports:
       - "8086:8086"

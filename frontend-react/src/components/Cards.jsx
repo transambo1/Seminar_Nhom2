@@ -28,9 +28,22 @@ export const AlertCard = ({ alert }) => (
 );
 
 export const NotificationItem = ({ notif, onRead }) => (
-  <div className="card" style={{ opacity: notif.isRead ? 0.6 : 1 }}>
-    <strong>{notif.title}</strong>
-    <p>{notif.message}</p>
-    {!notif.isRead && <button className="btn" onClick={() => onRead(notif.id)} style={{ marginTop: '10px', padding: '5px 10px' }}>Đã đọc</button>}
+  <div className="card" style={{ 
+    borderLeft: notif.status === 'UNREAD' ? '4px solid #2563EB' : '1px solid #ddd',
+    background: notif.status === 'UNREAD' ? '#f0f7ff' : '#fff',
+    marginBottom: '10px'
+  }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+      <div style={{ flex: 1 }}>
+        <strong style={{ display: 'block', marginBottom: '5px' }}>{notif.title}</strong>
+        <p style={{ margin: 0, fontSize: '0.9rem', color: '#444' }}>{notif.message}</p>
+        <small style={{ color: '#888', display: 'block', marginTop: '5px' }}>
+          {new Date(notif.createdAt).toLocaleString('vi-VN')}
+        </small>
+      </div>
+      {notif.status === 'UNREAD' && (
+        <button className="btn btn-outline" onClick={() => onRead(notif.id)} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>Đã đọc</button>
+      )}
+    </div>
   </div>
 );

@@ -13,13 +13,21 @@ const Dashboard = () => {
   const [userLoc, setUserLoc] = useState({ lat: 10.8231, lng: 106.6297 });
 
   useEffect(() => {
-    getSheltersApi()
-      .then((res) => setShelters(res.data || []))
-      .catch(console.error);
+    const fetchMapData = () => {
+      getSheltersApi()
+        .then((res) => setShelters(res.data || []))
+        .catch(console.error);
 
-    getActiveAlertsApi()
-      .then((res) => setAlerts(res.data || []))
-      .catch(console.error);
+      getActiveAlertsApi()
+        .then((res) => setAlerts(res.data || []))
+        .catch(console.error);
+    };
+
+    fetchMapData();
+
+    const interval = setInterval(() => {
+      fetchMapData();
+    }, 120000);
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -31,6 +39,8 @@ const Dashboard = () => {
         (err) => console.warn('Dashboard Geo fallback:', err)
       );
     }
+
+    return () => clearInterval(interval);
   }, []);
 
   const nearestShelters = useMemo(() => {
@@ -70,10 +80,6 @@ const Dashboard = () => {
     return withDistance.sort((a, b) => a.distance - b.distance).slice(0, 3);
   }, [shelters, userLoc]);
 
-  const activeAlertText =
-    alerts?.[0]?.message ||
-    alerts?.[0]?.title ||
-    'Cảnh báo: Mực nước sông đang dâng cao tại khu vực Quận 7';
 
   return (
     <>
@@ -344,13 +350,7 @@ const Dashboard = () => {
         </aside>
 
         <section className="dashboard-map-area">
-          <div className="dashboard-map-alert">
-            <div className="dashboard-map-alert-left">
-              <span style={{ fontSize: '1.3rem' }}>⚠</span>
-              <span>{activeAlertText}</span>
-            </div>
-            <button className="dashboard-map-alert-close">×</button>
-          </div>
+          
 
           <div className="dashboard-map-wrapper">
             <StormShieldMap
