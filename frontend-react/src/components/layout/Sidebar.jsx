@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Home, ClipboardList, House, FileWarning, Menu, Eye, EyeOff, LayoutDashboard } from 'lucide-react';
+import { Shield, Home, ClipboardList, House, FileWarning, Menu, Eye, EyeOff, LayoutDashboard, Users } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const citizenMenuItems = [
@@ -61,6 +61,12 @@ const adminMenuItems = [
     path: "/admin/shelters"
   },
   {
+    key: "admin-rescue-teams",
+    label: "Đội cứu hộ",
+    icon: Users,
+    path: "/admin/rescue-teams"
+  },
+  {
     key: "admin-weather",
     label: "Giám sát thời tiết",
     icon: Eye,
@@ -71,7 +77,6 @@ const adminMenuItems = [
 export default function Sidebar({ collapsed, setCollapsed, mapLayers, onToggleLayer }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
   
   const isAdminPath = location.pathname.startsWith('/admin');
   const filteredMenuItems = isAdminPath ? adminMenuItems : citizenMenuItems;

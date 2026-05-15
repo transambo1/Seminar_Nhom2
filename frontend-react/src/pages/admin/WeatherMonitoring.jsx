@@ -5,7 +5,6 @@ import {
   Filter, 
   AlertTriangle,
   Info,
-  Calendar,
   MapPin,
   Clock,
   X,
@@ -60,13 +59,6 @@ export default function WeatherMonitoring() {
     active: alerts.filter(a => a.status === 'ACTIVE').length,
     critical: alerts.filter(a => a.severityLevel === 'CRITICAL').length,
     provinces: new Set(alerts.map(a => a.provinceCode)).size
-  };
-
-  const handleResetFilters = () => {
-    setSearchTerm('');
-    setTypeFilter('ALL');
-    setSeverityFilter('ALL');
-    setStatusFilter('ALL');
   };
 
   const handleViewOnMap = (alert) => {

@@ -16,8 +16,6 @@ export default function IncidentManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-
   const fetchIncidents = async () => {
     setLoading(true);
     try {

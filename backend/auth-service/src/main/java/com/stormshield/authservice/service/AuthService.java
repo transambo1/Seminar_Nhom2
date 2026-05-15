@@ -95,7 +95,19 @@ public class AuthService {
     }
 
     public UserResponse createRescueAccount(CreateRescueAccountRequest request) {
-        return createInternalAccountFromSpecificRequest(request, UserRole.RESCUE);
+        UserRole role = UserRole.RESCUE;
+        if (request.getRole() != null) {
+            try {
+                role = UserRole.valueOf(request.getRole().toUpperCase());
+                if (role == UserRole.ADMIN) {
+                    throw new IllegalArgumentException("Cannot create ADMIN account through this endpoint");
+                }
+            } catch (IllegalArgumentException e) {
+                if (e.getMessage() != null && e.getMessage().contains("ADMIN")) throw e;
+                // Default to RESCUE if role is invalid
+            }
+        }
+        return createInternalAccountFromSpecificRequest(request, role);
     }
 
     public UserResponse createAdminAccount(CreateRescueAccountRequest request) {

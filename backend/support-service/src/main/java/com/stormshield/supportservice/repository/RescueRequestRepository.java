@@ -12,5 +12,6 @@ import java.util.List;
 public interface RescueRequestRepository extends JpaRepository<RescueRequest, Long>, JpaSpecificationExecutor<RescueRequest> {
     List<RescueRequest> findByUserId(Long userId);
     List<RescueRequest> findByStatus(RequestStatus status);
+    List<RescueRequest> findByAssignedTeamId(Long assignedTeamId);
     long countByStatus(RequestStatus status);
 }

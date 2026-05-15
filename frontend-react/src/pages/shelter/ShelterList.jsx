@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { House, MapPin, Phone, Users, Search, RotateCcw, ListFilter } from 'lucide-react';
+import { Search, RotateCcw, ListFilter } from 'lucide-react';
 import { getSheltersApi } from '../../api/shelterApi';
 import MainLayout from '../../components/layout/MainLayout';
 import ShelterDetailModal from '../../components/common/ShelterDetailModal';
@@ -61,20 +61,6 @@ export default function ShelterList() {
     setSearchTerm('');
     setStatusFilter('ALL');
     setSortBy('NAME_ASC');
-  };
-
-  const getStatusBadgeStyle = (status) => {
-    switch (status) {
-      case 'AVAILABLE':
-      case 'OPEN':
-        return { bg: '#F0FDF4', text: '#16A34A', border: '#DCFCE7', label: 'SẴN SÀNG' };
-      case 'FULL':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FEE2E2', label: 'HẾT CHỖ' };
-      case 'CLOSED':
-        return { bg: '#F9FAFB', text: '#64748B', border: '#E5E7EB', label: 'ĐÓNG CỬA' };
-      default:
-        return { bg: '#F0FDF4', text: '#16A34A', border: '#DCFCE7', label: 'SẴN SÀNG' };
-    }
   };
 
   return (

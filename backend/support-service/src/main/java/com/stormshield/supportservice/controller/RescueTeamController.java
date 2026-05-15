@@ -41,6 +41,12 @@ public class RescueTeamController {
         return ResponseEntity.ok(teamService.getTeamById(id));
     }
 
+    @GetMapping("/leader/{leaderId}")
+    @Operation(summary = "Get rescue team by Leader ID")
+    public ResponseEntity<RescueTeamResponse> getTeamByLeaderId(@PathVariable Long leaderId) {
+        return ResponseEntity.ok(teamService.getTeamByLeaderId(leaderId));
+    }
+
     @PostMapping("/{id}/members")
     @Operation(summary = "Add a member to a rescue team")
     public ResponseEntity<RescueTeamMemberResponse> addMember(

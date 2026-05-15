@@ -21,7 +21,6 @@ import Topbar from "../../components/layout/Topbar";
 import { useMapState } from "../../context/MapContext";
 
 export default function CitizenDashboard() {
-  const navigate = useNavigate();
   const location = useLocation();
   const { 
     alerts, shelters, requests, updateMapData, isDataFresh

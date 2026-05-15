@@ -46,6 +46,12 @@ public class RescueRequestController {
         return ResponseEntity.ok(rescueService.getRequestById(id));
     }
 
+    @GetMapping("/team/{teamId}")
+    @Operation(summary = "Get requests assigned to a specific team")
+    public ResponseEntity<List<RescueRequestResponse>> getRequestsByTeamId(@PathVariable Long teamId) {
+        return ResponseEntity.ok(rescueService.getRequestsByAssignedTeamId(teamId));
+    }
+
     @GetMapping
     @Operation(summary = "Admin/rescuer gets all requests with optional filters")
     public ResponseEntity<List<RescueRequestResponse>> getAllRequests(

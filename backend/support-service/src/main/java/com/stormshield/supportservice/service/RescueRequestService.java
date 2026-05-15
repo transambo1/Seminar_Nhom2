@@ -58,6 +58,11 @@ public class RescueRequestService {
         return mapToResponse(repository.findById(id).orElseThrow(() -> new RuntimeException("Request not found")));
     }
 
+    public List<RescueRequestResponse> getRequestsByAssignedTeamId(Long teamId) {
+        return repository.findByAssignedTeamId(teamId)
+                .stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
     public List<RescueRequestResponse> getAllRequests(RequestStatus status, PriorityLevel priority, RequestType type) {
         Specification<RescueRequest> spec = Specification.where(null);
         if (status != null)

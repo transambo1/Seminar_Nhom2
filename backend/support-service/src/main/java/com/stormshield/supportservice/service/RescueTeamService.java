@@ -62,6 +62,12 @@ public class RescueTeamService {
         return mapToTeamResponse(team);
     }
 
+    public RescueTeamResponse getTeamByLeaderId(Long leaderId) {
+        RescueTeam team = teamRepository.findByLeaderId(leaderId)
+                .orElseThrow(() -> new RuntimeException("Team not found for leader ID: " + leaderId));
+        return mapToTeamResponse(team);
+    }
+
     @Transactional
     public RescueTeamMemberResponse addMemberToTeam(Long teamId, RescueTeamMemberCreateRequest request) {
         if (!teamRepository.existsById(teamId)) {

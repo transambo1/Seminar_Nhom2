@@ -22,4 +22,6 @@ public class CreateRescueAccountRequest {
     @NotBlank(message = "Phone number is required")
     @JsonProperty("phone")
     private String phoneNumber;
+
+    private String role; // RESCUE or RESCUE_LEADER
 }
