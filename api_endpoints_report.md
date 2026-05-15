@@ -40,8 +40,6 @@ It does **not** strip prefixes, so the frontend URL directly matches the control
 | `GET`  | `/api/v1/alerts/active` | *None* | `List<AlertResponse>` | Get currently active and valid alerts |
 | `GET`  | `/api/v1/alerts/statistics` | *None* | `AlertStatisticsResponse` | Get overall alert statistics |
 | `POST` | `/api/v1/alerts/filter` | `AlertFilterRequest` | `List<AlertResponse>` | Advanced filter with sorting and distance calculation |
-| `POST` | `/api/v1/alerts/sync-external` | *None* | `ExternalAlertSyncResult` | Manually trigger NASA EONET sync |
-| `GET`  | `/api/v1/alerts/external` | *None* | `List<AlertResponse>` | Get imported external alerts |
 
 ### Incident Reports
 **Controller:** `IncidentReportController.java`  
@@ -146,8 +144,6 @@ All services consistently use the `/api/v1` prefix. There are no duplicated or m
 - GET /api/v1/alerts/active - Get currently active and valid alerts
 - GET /api/v1/alerts/statistics - Get overall alert statistics
 - POST /api/v1/alerts/filter - Advanced filter with sorting and distance calculation
-- POST /api/v1/alerts/sync-external - Manually trigger NASA EONET sync
-- GET /api/v1/alerts/external - Get imported external alerts
 
 ### Incident Reports
 - POST /api/v1/incident-reports - Submit a new incident report
