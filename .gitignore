@@ -1,2 +1,7 @@
 
 _git_recovery_backup_untracked/
+
+frontend-react/node_modules/
+frontend-react/node_modules/.cache/
+frontend-react/build/
+backend/**/target/
