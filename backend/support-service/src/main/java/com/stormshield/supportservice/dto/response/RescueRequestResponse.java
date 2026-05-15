@@ -1,5 +1,6 @@
 package com.stormshield.supportservice.dto.response;
 
+import com.stormshield.supportservice.entity.AssignmentStatus;
 import com.stormshield.supportservice.entity.PriorityLevel;
 import com.stormshield.supportservice.entity.RequestStatus;
 import com.stormshield.supportservice.entity.RequestType;
@@ -21,6 +22,10 @@ public class RescueRequestResponse {
     private PriorityLevel priorityLevel;
     private RequestStatus status;
     private Long assignedTeamId;
+    private Long assignedRescueUserId;
+    private AssignmentStatus assignmentStatus;
+    private String assignmentReason;
+    private Double distanceKm;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Double distance;

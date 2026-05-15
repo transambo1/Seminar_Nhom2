@@ -9,17 +9,15 @@ import {
   MapPin,
   Clock,
   X,
-  Map as MapIcon
+  Map as MapIcon,
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../../components/layout/Sidebar';
-import Topbar from '../../components/layout/Topbar';
 import { getActiveAlertsApi } from '../../api/alertApi';
 import '../../styles/WeatherMonitoring.css';
 
 export default function WeatherMonitoring() {
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAlert, setSelectedAlert] = useState(null);
@@ -36,7 +34,6 @@ export default function WeatherMonitoring() {
     setLoading(true);
     try {
       const res = await getActiveAlertsApi();
-      // Filter only weather source
       const weatherAlerts = (res.data || []).filter(a => a.source === 'WEATHER');
       setAlerts(weatherAlerts);
     } catch (error) {
@@ -82,198 +79,163 @@ export default function WeatherMonitoring() {
   };
 
   return (
-    <div className="storm-page">
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-      
-      <main className="storm-main">
-        <Topbar 
-          title="Theo dõi nguy cơ thiên tai tự động" 
-          user={user} 
-          onToggleSidebar={() => setCollapsed(!collapsed)} 
-        />
-
-        <div className="weather-content p-6">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="stat-card">
-              <div className="stat-icon bg-orange-100 text-orange-600"><CloudRain size={24} /></div>
-              <div className="stat-info">
-                <h3>{stats.total}</h3>
-                <p>Tổng cảnh báo</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon bg-green-100 text-green-600"><Info size={24} /></div>
-              <div className="stat-info">
-                <h3>{stats.active}</h3>
-                <p>Đang hoạt động</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon bg-red-100 text-red-600"><AlertTriangle size={24} /></div>
-              <div className="stat-info">
-                <h3>{stats.critical}</h3>
-                <p>Mức nguy hiểm (CRITICAL)</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon bg-purple-100 text-purple-600"><MapPin size={24} /></div>
-              <div className="stat-info">
-                <h3>{stats.provinces}</h3>
-                <p>Tỉnh/Thành bị ảnh hưởng</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="filter-panel mb-6">
-            <div className="flex flex-wrap gap-4 items-center">
-              <div className="search-box">
-                <Search size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Tìm theo tỉnh, tiêu đề..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              <div className="filter-group">
-                <Filter size={16} />
-                <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-                  <option value="ALL">Tất cả loại</option>
-                  <option value="STORM">Bão</option>
-                  <option value="FLOOD">Lũ lụt</option>
-                </select>
-              </div>
-
-              <div className="filter-group">
-                <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
-                  <option value="ALL">Tất cả mức độ</option>
-                  <option value="CRITICAL">CRITICAL</option>
-                  <option value="HIGH">HIGH</option>
-                  <option value="MEDIUM">MEDIUM</option>
-                  <option value="LOW">LOW</option>
-                </select>
-              </div>
-
-              <div className="filter-group">
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                  <option value="ALL">Tất cả trạng thái</option>
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="EXPIRED">EXPIRED</option>
-                </select>
-              </div>
-
-              <button className="btn-text" onClick={handleResetFilters}>Đặt lại</button>
-              <button className="btn-outline ml-auto" onClick={fetchData}>Làm mới</button>
-              
-              {user.role === 'ADMIN' && (
-                <button 
-                  className="btn-primary" 
-                  onClick={async () => {
-                    if(window.confirm('Kích hoạt quét thời tiết toàn quốc ngay bây giờ?')) {
-                        try {
-                            const res = await fetch('http://localhost:8081/api/v1/weather/test/scan/full', { method: 'POST' });
-                            if (res.ok) {
-                                alert('Đã kích hoạt quét thời tiết. Đang cập nhật dữ liệu...');
-                                setTimeout(fetchData, 2000);
-                            }
-                        } catch (e) {
-                            alert('Lỗi khi kích hoạt quét. Vui lòng kiểm tra backend.');
-                        }
-                    }
-                  }}
-                  title="Chạy quét thời tiết ngay lập tức (Demo Mode)"
-                >
-                  <CloudRain size={16} style={{marginRight: '8px'}} />
-                  Kích hoạt quét Demo
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Alert List */}
-          <div className="alert-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {loading ? (
-              <p>Đang tải dữ liệu...</p>
-            ) : filteredAlerts.length > 0 ? (
-              filteredAlerts.map(alert => (
-                <div key={alert.id} className={`weather-alert-card ${alert.severityLevel}`}>
-                  <div className="card-header">
-                    <div className="source-tag">NGUY CƠ TỰ ĐỘNG</div>
-                    <span className={`status-badge ${alert.status}`}>{alert.status}</span>
-                  </div>
-                  <h4 className="alert-title">{alert.title}</h4>
-                  <div className="alert-location">
-                    <MapPin size={14} />
-                    <span>{alert.provinceName}</span>
-                  </div>
-                  <p className="alert-desc">{alert.description.substring(0, 100)}...</p>
-                  <div className="alert-meta">
-                    <div className="meta-item"><Clock size={14} /> <span>{new Date(alert.createdAt).toLocaleDateString('vi-VN')}</span></div>
-                    <div className={`severity-tag ${alert.severityLevel}`}>{alert.severityLevel}</div>
-                  </div>
-                  <div className="card-actions">
-                    <button className="btn-outline btn-sm" onClick={() => setSelectedAlert(alert)}>Chi tiết</button>
-                    <button className="btn-primary btn-sm" onClick={() => handleViewOnMap(alert)}>
-                      <MapIcon size={14} /> Bản đồ
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="col-span-full text-center py-12 text-gray-500">Không tìm thấy cảnh báo nào phù hợp.</p>
-            )}
-          </div>
+    <div className="admin-page-container">
+      {/* Stats Section */}
+      <div className="stats-grid">
+        <div className="stat-item">
+          <div className="stat-icon-wrap" style={{background: '#fff7ed', color: '#ea580c'}}><CloudRain size={24} /></div>
+          <div className="stat-val"><h3>{stats.total}</h3><p>Tổng cảnh báo</p></div>
         </div>
-      </main>
+        <div className="stat-item">
+          <div className="stat-icon-wrap" style={{background: '#f0fdf4', color: '#16a34a'}}><Info size={24} /></div>
+          <div className="stat-val"><h3>{stats.active}</h3><p>Đang hoạt động</p></div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-icon-wrap" style={{background: '#fef2f2', color: '#dc2626'}}><AlertTriangle size={24} /></div>
+          <div className="stat-val"><h3>{stats.critical}</h3><p>Mức nguy hiểm</p></div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-icon-wrap" style={{background: '#f5f3ff', color: '#7c3aed'}}><MapPin size={24} /></div>
+          <div className="stat-val"><h3>{stats.provinces}</h3><p>Tỉnh bị ảnh hưởng</p></div>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="filter-bar">
+        <div className="search-box" style={{flex: 1, position: 'relative'}}>
+          <Search size={18} style={{position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b'}} />
+          <input 
+            type="text" 
+            className="filter-input"
+            style={{paddingLeft: '40px', width: '100%'}}
+            placeholder="Tìm theo tỉnh, tiêu đề..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="filter-item">
+          <Filter size={16} color="#64748b" />
+          <select className="filter-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <option value="ALL">Tất cả loại</option>
+            <option value="STORM">Bão</option>
+            <option value="FLOOD">Lũ lụt</option>
+          </select>
+        </div>
+        <div className="filter-item">
+          <select className="filter-select" value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
+            <option value="ALL">Tất cả mức độ</option>
+            <option value="CRITICAL">CRITICAL</option>
+            <option value="HIGH">HIGH</option>
+          </select>
+        </div>
+        <button className="btn-admin btn-admin-outline" onClick={fetchData}><RefreshCw size={16}/></button>
+        
+        {user.role === 'ADMIN' && (
+          <button 
+            className="btn-admin btn-admin-primary" 
+            onClick={async () => {
+              if(window.confirm('Kích hoạt quét thời tiết toàn quốc ngay bây giờ (Demo Mode)?')) {
+                  try {
+                      const res = await fetch('http://localhost:8081/api/v1/weather/test/scan/full', { method: 'POST' });
+                      if (res.ok) {
+                          alert('Đã kích hoạt quét thời tiết. Hệ thống đang thu thập dữ liệu...');
+                          setTimeout(fetchData, 2000);
+                      }
+                  } catch (e) {
+                      alert('Lỗi khi kích hoạt quét. Vui lòng kiểm tra backend service.');
+                  }
+              }
+            }}
+          >
+            Kích hoạt quét Demo
+          </button>
+        )}
+      </div>
+
+      {/* Alert List */}
+      {loading ? (
+        <div className="text-center py-12">Đang tải dữ liệu thời tiết...</div>
+      ) : (
+        <div className="admin-grid">
+          {filteredAlerts.length > 0 ? (
+            filteredAlerts.map(alert => (
+              <div key={alert.id} className="admin-card">
+                <div className="card-title">
+                   <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                      <CloudRain size={18} color="#ea580c"/>
+                      <span style={{fontSize: '1rem'}}>{alert.title}</span>
+                  </div>
+                  <span className={`admin-badge badge-${alert.status?.toLowerCase()}`}>{alert.status}</span>
+                </div>
+                
+                <div style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#475569', marginBottom: '12px'}}>
+                    <MapPin size={14} color="#64748b"/>
+                    <strong>{alert.provinceName}</strong>
+                </div>
+
+                <p style={{fontSize: '0.85rem', color: '#64748b', marginBottom: '16px', lineHeight: '1.5', minHeight: '4.5em'}}>
+                    {alert.description.substring(0, 150)}...
+                </p>
+
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
+                    <span className={`admin-badge badge-${alert.severityLevel?.toLowerCase()}`}>{alert.severityLevel}</span>
+                    <div style={{fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px'}}>
+                        <Clock size={12}/> {new Date(alert.createdAt).toLocaleDateString('vi-VN')}
+                    </div>
+                </div>
+
+                <div style={{display: 'flex', gap: '10px', borderTop: '1px solid #f1f5f9', paddingTop: '16px'}}>
+                    <button className="btn-admin btn-admin-outline" style={{flex: 1}} onClick={() => setSelectedAlert(alert)}>Chi tiết</button>
+                    <button className="btn-admin btn-admin-primary" style={{flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'}} onClick={() => handleViewOnMap(alert)}>
+                        <MapIcon size={14} /> Bản đồ
+                    </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12 text-gray-500 bg-white rounded-xl border border-dashed">
+                Không tìm thấy dữ liệu thời tiết phù hợp.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Detail Modal */}
       {selectedAlert && (
-        <div className="modal-overlay" onClick={() => setSelectedAlert(null)}>
-          <div className="modal-content detail-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Chi tiết cảnh báo hệ thống</h3>
-              <button onClick={() => setSelectedAlert(null)}><X size={20} /></button>
+        <div className="storm-modal-overlay" style={{position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+          <div className="storm-modal" style={{background: 'white', padding: '24px', borderRadius: '12px', width: '600px', maxWidth: '90%'}} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{display: 'flex', justifyContent: 'space-between', marginBottom: '20px'}}>
+              <h3 style={{fontSize: '1.25rem', fontWeight: '700'}}>Chi tiết cảnh báo hệ thống</h3>
+              <button onClick={() => setSelectedAlert(null)} style={{background: 'none', border: 'none', cursor: 'pointer'}}><X size={20} /></button>
             </div>
             <div className="modal-body">
-              <div className="detail-grid">
-                <div className="detail-info">
-                  <div className="info-header mb-4">
-                    <span className="source-label">Nguồn: Hệ thống quét thời tiết</span>
-                    <h2 className="text-2xl font-bold text-gray-800">{selectedAlert.title}</h2>
-                  </div>
-                  
-                  <div className="info-section mb-6">
-                    <label>Nội dung cảnh báo</label>
-                    <p className="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg">{selectedAlert.description}</p>
-                  </div>
+              <div style={{background: '#f8fafc', padding: '16px', borderRadius: '8px', marginBottom: '20px'}}>
+                <span style={{fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '600'}}>Nội dung cảnh báo</span>
+                <p style={{marginTop: '8px', lineHeight: '1.6', color: '#1e293b'}}>{selectedAlert.description}</p>
+              </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="info-item">
-                      <label><MapPin size={14} /> Địa điểm</label>
-                      <span>{selectedAlert.provinceName} ({selectedAlert.latitude}, {selectedAlert.longitude})</span>
-                    </div>
-                    <div className="info-item">
-                      <label><AlertTriangle size={14} /> Mức độ</label>
-                      <span className={`severity-text ${selectedAlert.severityLevel}`}>{selectedAlert.severityLevel}</span>
-                    </div>
-                    <div className="info-item">
-                      <label><Calendar size={14} /> Thời điểm phát hiện</label>
-                      <span>{new Date(selectedAlert.createdAt).toLocaleString('vi-VN')}</span>
-                    </div>
-                    <div className="info-item">
-                      <label><Clock size={14} /> Dự kiến hết hiệu lực</label>
-                      <span>{new Date(selectedAlert.endTime).toLocaleString('vi-VN')}</span>
-                    </div>
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+                  <div className="detail-item">
+                      <label style={{display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '4px'}}>Địa điểm</label>
+                      <span style={{fontWeight: '600'}}>{selectedAlert.provinceName}</span>
                   </div>
-                </div>
+                  <div className="detail-item">
+                      <label style={{display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '4px'}}>Mức độ</label>
+                      <span className={`admin-badge badge-${selectedAlert.severityLevel?.toLowerCase()}`}>{selectedAlert.severityLevel}</span>
+                  </div>
+                  <div className="detail-item">
+                      <label style={{display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '4px'}}>Thời điểm ghi nhận</label>
+                      <span style={{fontSize: '0.9rem'}}>{new Date(selectedAlert.createdAt).toLocaleString('vi-VN')}</span>
+                  </div>
+                  <div className="detail-item">
+                      <label style={{display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '4px'}}>Tọa độ tâm điểm</label>
+                      <span style={{fontSize: '0.9rem'}}>{selectedAlert.latitude}, {selectedAlert.longitude}</span>
+                  </div>
               </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn-outline" onClick={() => setSelectedAlert(null)}>Đóng</button>
-              <button className="btn-primary" onClick={() => handleViewOnMap(selectedAlert)}>Xem trên bản đồ</button>
+            <div style={{marginTop: '30px', display: 'flex', gap: '12px'}}>
+              <button className="btn-admin btn-admin-outline" style={{flex: 1}} onClick={() => setSelectedAlert(null)}>Đóng</button>
+              <button className="btn-admin btn-admin-primary" style={{flex: 1}} onClick={() => handleViewOnMap(selectedAlert)}>Xem trên bản đồ</button>
             </div>
           </div>
         </div>

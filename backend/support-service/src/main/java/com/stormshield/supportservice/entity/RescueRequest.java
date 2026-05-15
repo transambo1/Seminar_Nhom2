@@ -49,6 +49,16 @@ public class RescueRequest {
 
     private Long assignedTeamId;
 
+    private Long assignedRescueUserId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private AssignmentStatus assignmentStatus = AssignmentStatus.UNASSIGNED;
+
+    private String assignmentReason;
+
+    private Double distanceKm;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

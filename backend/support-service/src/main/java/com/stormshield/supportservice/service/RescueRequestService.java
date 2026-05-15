@@ -235,6 +235,10 @@ Double userLng = request.getUserLng();
                 .latitude(r.getLatitude()).longitude(r.getLongitude())
                 .priorityLevel(r.getPriorityLevel()).status(r.getStatus())
                 .assignedTeamId(r.getAssignedTeamId())
+                .assignedRescueUserId(r.getAssignedRescueUserId())
+                .assignmentStatus(r.getAssignmentStatus())
+                .assignmentReason(r.getAssignmentReason())
+                .distanceKm(r.getDistanceKm())
                 .createdAt(r.getCreatedAt()).updatedAt(r.getUpdatedAt())
                 .build();
     }

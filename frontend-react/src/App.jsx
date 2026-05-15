@@ -13,10 +13,15 @@ import MySupports from './pages/support/MyRequests';
 import Notifications from './pages/dashboard/Notifications';
 import { AdminSupportManagement } from './pages/admin/AdminPages';
 import WeatherMonitoring from './pages/admin/WeatherMonitoring';
+import ManageAlerts from './pages/admin/ManageAlerts';
+import ManageShelters from './pages/admin/ManageShelters';
+import IncidentManagement from './pages/admin/IncidentManagement';
 import IncidentReport from './pages/incident/IncidentReport';
 import ShelterList from './pages/shelter/ShelterList';
 import IncidentList from './pages/incident/IncidentList';
 import Profile from './pages/auth/Profile';
+
+import MainLayout from './components/layout/MainLayout';
 
 function App() {
   return (
@@ -38,8 +43,12 @@ function App() {
             <Route path="/incidents" element={<ProtectedRoute><IncidentList /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             
-            <Route path="/admin/supports" element={<ProtectedRoute adminOnly><AdminSupportManagement /></ProtectedRoute>} />
-            <Route path="/admin/weather" element={<ProtectedRoute adminOnly><WeatherMonitoring /></ProtectedRoute>} />
+            {/* Admin Routes wrapped in MainLayout */}
+            <Route path="/admin/supports" element={<ProtectedRoute adminOnly><MainLayout title="Quản lý yêu cầu cứu hộ"><AdminSupportManagement /></MainLayout></ProtectedRoute>} />
+            <Route path="/admin/weather" element={<ProtectedRoute adminOnly><MainLayout title="Giám sát thiên tai tự động"><WeatherMonitoring /></MainLayout></ProtectedRoute>} />
+            <Route path="/admin/alerts" element={<ProtectedRoute adminOnly><MainLayout title="Quản lý cảnh báo khẩn cấp"><ManageAlerts /></MainLayout></ProtectedRoute>} />
+            <Route path="/admin/shelters" element={<ProtectedRoute adminOnly><MainLayout title="Quản lý điểm trú ẩn"><ManageShelters /></MainLayout></ProtectedRoute>} />
+            <Route path="/admin/incidents" element={<ProtectedRoute adminOnly><MainLayout title="Duyệt báo cáo sự cố"><IncidentManagement /></MainLayout></ProtectedRoute>} />
           </Routes>
         </MapProvider>
       </APIProvider>

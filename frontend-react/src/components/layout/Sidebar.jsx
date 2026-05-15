@@ -1,8 +1,8 @@
 import React from 'react';
-import { Shield, Home, ClipboardList, House, FileWarning, Menu, Eye, EyeOff } from 'lucide-react';
+import { Shield, Home, ClipboardList, House, FileWarning, Menu, Eye, EyeOff, LayoutDashboard } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const menuItems = [
+const citizenMenuItems = [
   {
     key: "home",
     label: "Trang chủ",
@@ -29,26 +29,52 @@ const menuItems = [
   },
 ];
 
+const adminMenuItems = [
+  {
+    key: "admin-dashboard",
+    label: "Tổng quan",
+    icon: LayoutDashboard,
+    path: "/admin/weather" // Tạm thời trỏ về weather cho đến khi có Dashboard admin riêng
+  },
+  {
+    key: "admin-supports",
+    label: "Yêu cầu cứu hộ",
+    icon: Shield,
+    path: "/admin/supports"
+  },
+  {
+    key: "admin-incidents",
+    label: "Báo cáo sự cố",
+    icon: ClipboardList,
+    path: "/admin/incidents"
+  },
+  {
+    key: "admin-alerts",
+    label: "Cảnh báo",
+    icon: FileWarning,
+    path: "/admin/alerts"
+  },
+  {
+    key: "admin-shelters",
+    label: "Nơi trú ẩn",
+    icon: House,
+    path: "/admin/shelters"
+  },
+  {
+    key: "admin-weather",
+    label: "Giám sát thời tiết",
+    icon: Eye,
+    path: "/admin/weather"
+  },
+];
+
 export default function Sidebar({ collapsed, setCollapsed, mapLayers, onToggleLayer }) {
   const navigate = useNavigate();
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   
-  const filteredMenuItems = [...menuItems];
-  if (user.role === 'ADMIN' || user.role === 'RESCUER') {
-    filteredMenuItems.push({
-      key: "admin-supports",
-      label: "Quản lý cứu hộ",
-      icon: Shield,
-      path: "/admin/supports"
-    });
-    filteredMenuItems.push({
-      key: "admin-weather",
-      label: "Theo dõi nguy cơ thiên tai",
-      icon: Eye,
-      path: "/admin/weather"
-    });
-  }
+  const isAdminPath = location.pathname.startsWith('/admin');
+  const filteredMenuItems = isAdminPath ? adminMenuItems : citizenMenuItems;
 
   return (
     <aside className={`storm-sidebar ${collapsed ? "collapsed" : ""}`}>

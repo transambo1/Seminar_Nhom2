@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { getMyNotificationsApi, getUnreadCountApi } from '../../api/notificationApi';
-import '../../styles/CitizenDashboard.css';
+import '../../styles/Admin.css';
 
 export default function MainLayout({ children, title, subtitle, mapLayers, onToggleLayer }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -25,7 +25,6 @@ export default function MainLayout({ children, title, subtitle, mapLayers, onTog
       }
     };
     fetchNotis();
-    // Setup simple interval for refresh or SSE could be here
   }, [user.id]);
 
   return (
@@ -36,7 +35,7 @@ export default function MainLayout({ children, title, subtitle, mapLayers, onTog
         mapLayers={mapLayers}
         onToggleLayer={onToggleLayer}
       />
-      <main className="storm-main">
+      <main className="storm-main" style={{ backgroundColor: '#f3f6fb' }}>
         <Topbar 
           title={title} 
           subtitle={subtitle} 
@@ -45,7 +44,7 @@ export default function MainLayout({ children, title, subtitle, mapLayers, onTog
           unreadCount={unreadCount}
           onToggleSidebar={() => setCollapsed(!collapsed)}
         />
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        <div className="admin-content-area" style={{ flex: 1, overflowY: 'auto', padding: '30px' }}>
           {children}
         </div>
       </main>
