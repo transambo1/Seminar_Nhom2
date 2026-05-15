@@ -82,6 +82,12 @@ public ResponseEntity<List<RescueRequestResponse>> filterRequests(
         return ResponseEntity.ok(rescueService.assignTeam(id, request));
     }
 
+    @PostMapping("/{id}/auto-assign")
+    @Operation(summary = "Trigger auto assignment for a specific request")
+    public ResponseEntity<RescueRequestResponse> autoAssign(@PathVariable Long id) {
+        return ResponseEntity.ok(rescueService.manualAutoAssign(id));
+    }
+
     @PatchMapping("/{id}/status")
     @Operation(summary = "Update request status")
     public ResponseEntity<RescueRequestResponse> updateStatus(@PathVariable Long id,
