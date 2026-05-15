@@ -8,8 +8,6 @@ import com.stormshield.alertservice.entity.AlertStatus;
 import com.stormshield.alertservice.entity.AlertType;
 import com.stormshield.alertservice.entity.SeverityLevel;
 import com.stormshield.alertservice.service.AlertService;
-import com.stormshield.alertservice.external.ExternalAlertSyncService;
-import com.stormshield.alertservice.external.ExternalAlertSyncResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -27,7 +25,6 @@ import java.util.List;
 public class AlertController {
 
     private final AlertService alertService;
-    private final ExternalAlertSyncService externalAlertSyncService;
 
     @PostMapping
     @Operation(summary = "Create a new alert")
@@ -72,17 +69,5 @@ public class AlertController {
     @Operation(summary = "Advanced filter with sorting and distance calculation")
     public ResponseEntity<List<AlertResponse>> filterAlerts(@RequestBody AlertFilterRequest request) {
         return ResponseEntity.ok(alertService.filterAlerts(request));
-    }
-
-    @PostMapping("/sync-external")
-    @Operation(summary = "Manually trigger NASA EONET sync")
-    public ResponseEntity<ExternalAlertSyncResult> syncExternal() {
-        return ResponseEntity.ok(externalAlertSyncService.syncNasaEvents());
-    }
-
-    @GetMapping("/external")
-    @Operation(summary = "Get imported external alerts")
-    public ResponseEntity<List<AlertResponse>> getExternalAlerts() {
-        return ResponseEntity.ok(alertService.getExternalAlerts());
     }
 }

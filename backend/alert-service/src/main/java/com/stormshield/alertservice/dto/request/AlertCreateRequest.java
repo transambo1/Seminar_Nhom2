@@ -43,6 +43,8 @@ public class AlertCreateRequest {
     @NotBlank(message = "Issued by is required")
     private String issuedBy;
 
+    private String source = "MANUAL";
+
     public boolean isValidTimeRange() {
         if (startTime != null && endTime != null) {
             return endTime.isAfter(startTime);

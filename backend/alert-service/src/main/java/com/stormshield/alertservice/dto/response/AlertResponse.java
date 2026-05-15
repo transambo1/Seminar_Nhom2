@@ -24,5 +24,8 @@ public class AlertResponse {
     private String issuedBy;
     private AlertStatus status;
     private LocalDateTime createdAt;
+    private String source;
+    private String provinceCode;
+    private String provinceName;
     private Double distance;
 }

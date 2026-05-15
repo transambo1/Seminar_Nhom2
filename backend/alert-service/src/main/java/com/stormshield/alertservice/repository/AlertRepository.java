@@ -12,12 +12,16 @@ import java.util.List;
 @Repository
 public interface AlertRepository extends JpaRepository<Alert, Long>, JpaSpecificationExecutor<Alert> {
     
-    @Query("SELECT a FROM Alert a WHERE a.status = 'ACTIVE' AND (a.source = 'NASA_EONET' OR (a.startTime <= :now AND a.endTime >= :now))")
+    @Query("SELECT a FROM Alert a WHERE a.status = 'ACTIVE' AND a.startTime <= :now AND a.endTime >= :now")
     List<Alert> findActiveAndValidAlerts(LocalDateTime now);
 
     long countByStatus(com.stormshield.alertservice.entity.AlertStatus status);
     long countBySeverityLevel(com.stormshield.alertservice.entity.SeverityLevel severityLevel);
-
-    boolean existsBySourceAndExternalEventId(String source, String externalEventId);
-    List<Alert> findBySource(String source);
+    
+    java.util.Optional<Alert> findFirstByProvinceCodeAndAlertTypeAndSourceAndStatus(
+        String provinceCode, 
+        com.stormshield.alertservice.entity.AlertType alertType, 
+        String source, 
+        com.stormshield.alertservice.entity.AlertStatus status
+    );
 }

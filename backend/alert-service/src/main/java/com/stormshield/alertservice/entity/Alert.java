@@ -60,15 +60,17 @@ public class Alert {
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = true)
+    private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
     private String source;
 
     @Column(nullable = true)
-    private String externalEventId;
+    private String provinceCode;
+
+    @Column(nullable = true)
+    private String provinceName;
 
     @Column(nullable = true)
     private Long createdFromReportId;
-
-    @Column(nullable = true)
-    private LocalDateTime lastSyncedAt;
 }

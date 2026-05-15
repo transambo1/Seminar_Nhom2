@@ -44,6 +44,7 @@ public class AlertService {
                 .endTime(request.getEndTime())
                 .issuedBy(request.getIssuedBy())
                 .status(AlertStatus.ACTIVE)
+                .source(request.getSource() != null ? request.getSource() : "MANUAL")
                 .build();
 
         Alert savedAlert = alertRepository.save(alert);
@@ -129,6 +130,9 @@ public class AlertService {
                 .endTime(alert.getEndTime())
                 .issuedBy(alert.getIssuedBy())
                 .status(alert.getStatus())
+                .source(alert.getSource())
+                .provinceCode(alert.getProvinceCode())
+                .provinceName(alert.getProvinceName())
                 .createdAt(alert.getCreatedAt())
                 .build();
     }
@@ -184,10 +188,6 @@ public class AlertService {
             }
             return res;
         }).collect(Collectors.toList());
-    }
-
-    public List<AlertResponse> getExternalAlerts() {
-        return alertRepository.findBySource("NASA_EONET").stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     private double calculateDistance(Double lat1, Double lon1, Double lat2, Double lon2) {
