@@ -110,7 +110,7 @@ const Login = () => {
             <div className="login-form-group">
               <div className="login-label-row">
                 <label className="login-label" htmlFor="password" style={{ marginBottom: 0 }}>Mật khẩu</label>
-                <Link className="login-forgot-link" to="/forgot-password">Quên mật khẩu?</Link>
+                <Link className="login-forgot-link" to="#">Quên mật khẩu?</Link>
               </div>
               <div className="login-input-wrapper">
                 <div className="login-input-icon">

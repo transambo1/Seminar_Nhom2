@@ -1,18 +1,18 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import SupportRequestForm from '../../components/support/SupportRequestForm';
+import IncidentReportForm from '../../components/incident/IncidentReportForm';
 
-export const RequestSupport = () => {
+export default function IncidentReport() {
   const nav = useNavigate();
 
   return (
     <div className="container" style={{ maxWidth: '600px', padding: '40px 20px' }}>
       <div className="card">
-        <h1>Yêu cầu Hỗ trợ khẩn cấp</h1>
+        <h1 style={{ color: '#EF4444' }}>Báo cáo sự cố khẩn cấp</h1>
         <div style={{ marginTop: '20px' }}>
-          <SupportRequestForm onSuccess={() => nav('/request-list')} />
+          <IncidentReportForm onSuccess={() => nav('/dashboard')} />
         </div>
       </div>
     </div>
   );
-};
+}

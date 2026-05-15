@@ -30,7 +30,8 @@ const Navbar = () => {
     navigate('/login');
   };
 
-  if (location.pathname === '/dashboard' || location.pathname === '/') {
+  const hideOnPaths = ['/dashboard', '/', '/request-list', '/shelters', '/incidents', '/notifications', '/profile'];
+  if (hideOnPaths.includes(location.pathname)) {
     return null;
   }
 
@@ -42,6 +43,8 @@ const Navbar = () => {
           <>
             <NavLink to="/" end className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>Bảng điều khiển</NavLink>
             <NavLink to="/request-list" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>Danh sách yêu cầu</NavLink>
+            <NavLink to="/shelters" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>Nơi trú ẩn</NavLink>
+            <NavLink to="/incidents" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>Cảnh báo</NavLink>
             <NavLink to="/notifications" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} style={{position: 'relative'}}>
               <span role="img" aria-label="notifications" style={{fontSize: '1.2rem'}}>🔔</span>
               {unreadCount > 0 && (

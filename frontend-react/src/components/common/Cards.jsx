@@ -23,7 +23,19 @@ export const AlertCard = ({ alert }) => (
       <span className={`badge ${alert.severityLevel}`}>{alert.severityLevel}</span>
     </div>
     <p>{alert.description}</p>
-    <small>Khu vực: {alert.affectedArea}</small>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+      <small>Khu vực: {alert.affectedArea || alert.provinceName}</small>
+      <span style={{ 
+        fontSize: '10px', 
+        color: 'white', 
+        background: alert.source === 'WEATHER' ? '#EF4444' : '#4B5563', 
+        padding: '2px 6px', 
+        borderRadius: '4px',
+        fontWeight: 'bold'
+      }}>
+        {alert.source === 'WEATHER' ? 'NGUY CƠ THỜI TIẾT' : 'XÁC MINH'}
+      </span>
+    </div>
   </div>
 );
 

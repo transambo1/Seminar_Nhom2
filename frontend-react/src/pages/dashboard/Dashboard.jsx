@@ -1,344 +1,291 @@
 import React, { useState, useEffect } from "react";
 import {
-  Home,
-  Bell,
-  ClipboardList,
-  FileWarning,
-  LifeBuoy,
-  Menu,
-  Shield,
-  Search,
-  MapPin,
   Siren,
   TriangleAlert,
   House,
-  Route,
-  User,
-  LogOut,
-  ChevronDown,
   X,
   Minimize2,
-  Eye,
-  EyeOff
+  ClipboardList
 } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import '../../styles/CitizenDashboard.css';
 import MapView from "../../components/map/MapView";
 import { getActiveAlertsApi } from "../../api/alertApi";
 import { getSheltersApi } from "../../api/shelterApi";
 import { getAllSupportsApi } from "../../api/supportApi";
-
-const menuItems = [
-  {
-    key: "home",
-    label: "Trang chủ",
-    icon: Home,
-  },
-  {
-    key: "support",
-    label: "Yêu cầu cứu trợ",
-    icon: LifeBuoy,
-  },
-  {
-    key: "report",
-    label: "Báo cáo sự cố",
-    icon: FileWarning,
-  },
-  {
-    key: "my-requests",
-    label: "Yêu cầu của tôi",
-    icon: ClipboardList,
-  },
-  {
-    key: "notifications",
-    label: "Thông báo",
-    icon: Bell,
-  },
-];
+import { getMyNotificationsApi, getUnreadCountApi } from "../../api/notificationApi";
+import SupportRequestForm from "../../components/support/SupportRequestForm";
+import IncidentReportForm from "../../components/incident/IncidentReportForm";
+import Sidebar from "../../components/layout/Sidebar";
+import Topbar from "../../components/layout/Topbar";
+import { useMapState } from "../../context/MapContext";
 
 export default function CitizenDashboard() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { 
+    alerts, shelters, requests, updateMapData, isDataFresh
+  } = useMapState();
+
   const [collapsed, setCollapsed] = useState(false);
   const [infoPanelOpen, setInfoPanelOpen] = useState(true);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchTarget, setSearchTarget] = useState(null);
+  const [notis, setNotis] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   
-  // Map Data State
-  const [alerts, setAlerts] = useState([]);
-  const [shelters, setShelters] = useState([]);
-  const [requests, setRequests] = useState([]);
-  
+  // Local Focus State (transient, not persisted in Context to avoid auto-focus on return)
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedItemType, setSelectedItemType] = useState(null);
+
   // Layer Visibility State
   const [showAlerts, setShowAlerts] = useState(true);
   const [showShelters, setShowShelters] = useState(true);
   const [showRequests, setShowRequests] = useState(true);
+  
+  // User Location
+  const [myLocation, setMyLocation] = useState(null);
+  const [locStatus, setLocStatus] = useState('loading'); // 'loading', 'ok', 'denied'
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
+    const R = 6371e3; 
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  const handleFocusItem = (item, type) => {
+    if (!item || item.latitude == null || item.longitude == null) {
+      alert("Mục này không có thông tin vị trí chính xác.");
+      return;
+    }
+    setSelectedItem({ ...item, _focusTs: Date.now() });
+    setSelectedItemType(type);
+    
+    // Auto-open info panel if focused
+    setInfoPanelOpen(true);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
-      console.log("Dashboard: Starting data fetch...");
       try {
-        const [alertRes, shelterRes, supportRes] = await Promise.all([
-          getActiveAlertsApi(),
-          getSheltersApi(),
-          getAllSupportsApi()
-        ]);
+        const fetchTasks = [];
+        if (!isDataFresh('alerts')) fetchTasks.push(getActiveAlertsApi().then(res => updateMapData('alerts', res.data)));
+        if (!isDataFresh('shelters')) fetchTasks.push(getSheltersApi().then(res => updateMapData('shelters', res.data)));
+        if (!isDataFresh('requests')) fetchTasks.push(getAllSupportsApi().then(res => updateMapData('requests', res.data)));
         
-        console.log("Dashboard: Data fetched successfully", {
-          alerts: alertRes.data?.length || 0,
-          shelters: shelterRes.data?.length || 0,
-          requests: supportRes.data?.length || 0
-        });
+        fetchTasks.push(user.id ? getMyNotificationsApi(user.id).then(res => setNotis(res.data || [])) : Promise.resolve());
+        fetchTasks.push(user.id ? getUnreadCountApi(user.id).then(res => setUnreadCount(typeof res.data === 'object' ? res.data.unreadCount : (res.data || 0))) : Promise.resolve());
 
-        setAlerts(alertRes.data || []);
-        setShelters(shelterRes.data || []);
-        setRequests(supportRes.data || []);
+        await Promise.all(fetchTasks);
+        
+        // Handle target from state AFTER data is loaded to ensure marker exists
+        if (location.state?.targetRequest) {
+          const type = location.state.targetType || 'REQUEST';
+          handleFocusItem(location.state.targetRequest, type);
+          // Clear state to prevent re-focus on refresh
+          window.history.replaceState({}, document.title);
+        }
       } catch (error) {
-        console.error("Dashboard: Failed to fetch data:", error);
+        console.error("Error fetching data:", error);
       }
     };
     
     fetchData();
-  }, []);
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setLocStatus('ok');
+        },
+        () => setLocStatus('denied')
+      );
+    } else {
+      setLocStatus('denied');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.id, location.state]);
+
+  const getNearbyItems = (items) => {
+    if (!myLocation) return [];
+    return items
+      .map(item => ({
+        ...item,
+        distance: calculateDistance(myLocation.lat, myLocation.lng, Number(item.latitude), Number(item.longitude))
+      }))
+      .filter(item => item.distance <= 20000) 
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 3);
+  };
+
+  const nearbyAlerts = getNearbyItems(alerts);
+  const nearbyRequests = getNearbyItems(requests);
+  const nearbyShelters = getNearbyItems(shelters);
+
+  const mapLayers = [
+    { key: "alerts", label: "Cảnh báo", visible: showAlerts, color: "#EF4444" },
+    { key: "shelters", label: "Nơi trú ẩn", visible: showShelters, color: "#10B981" },
+    { key: "requests", label: "Yêu cầu SOS", visible: showRequests, color: "#F59E0B" }
+  ];
+
+  const toggleLayer = (key) => {
+    if (key === "alerts") setShowAlerts(!showAlerts);
+    if (key === "shelters") setShowShelters(!showShelters);
+    if (key === "requests") setShowRequests(!showRequests);
+  };
 
   return (
     <div className="storm-page">
-      <aside className={`storm-sidebar ${collapsed ? "collapsed" : ""}`}>
-        <div className="sidebar-brand">
-          <div className="brand-icon">
-            <Shield size={24} />
-          </div>
-
-          {!collapsed && (
-            <div className="brand-text">
-              <strong>StormShield</strong>
-              <span>Hệ thống cứu hộ cộng đồng</span>
-            </div>
-          )}
-        </div>
-
-        <nav className="sidebar-nav">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const active = item.key === "home";
-
-            return (
-              <button
-                key={item.key}
-                className={`sidebar-item ${active ? "active" : ""}`}
-                title={collapsed ? item.label : ""}
-              >
-                <Icon size={22} />
-                {!collapsed && <span>{item.label}</span>}
-              </button>
-            );
-          })}
-          
-          <div style={{ marginTop: '24px', padding: '0 16px' }}>
-             {!collapsed && <h4 style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Lớp bản đồ</h4>}
-             
-             <button 
-                onClick={() => setShowAlerts(!showAlerts)}
-                className={`sidebar-item ${showAlerts ? "" : "inactive"}`}
-                style={{ opacity: showAlerts ? 1 : 0.5 }}
-                title={collapsed ? "Cảnh báo" : ""}
-              >
-                {showAlerts ? <Eye size={20} /> : <EyeOff size={20} />}
-                {!collapsed && <span>Cảnh báo</span>}
-             </button>
-
-             <button 
-                onClick={() => setShowShelters(!showShelters)}
-                className={`sidebar-item ${showShelters ? "" : "inactive"}`}
-                style={{ opacity: showShelters ? 1 : 0.5 }}
-                title={collapsed ? "Nơi trú ẩn" : ""}
-              >
-                {showShelters ? <Eye size={20} /> : <EyeOff size={20} />}
-                {!collapsed && <span>Nơi trú ẩn</span>}
-             </button>
-
-             <button 
-                onClick={() => setShowRequests(!showRequests)}
-                className={`sidebar-item ${showRequests ? "" : "inactive"}`}
-                style={{ opacity: showRequests ? 1 : 0.5 }}
-                title={collapsed ? "Yêu cầu SOS" : ""}
-              >
-                {showRequests ? <Eye size={20} /> : <EyeOff size={20} />}
-                {!collapsed && <span>Yêu cầu SOS</span>}
-             </button>
-          </div>
-        </nav>
-
-        <button
-          className="sidebar-collapse"
-          onClick={() => setCollapsed((prev) => !prev)}
-          title={collapsed ? "Mở menu" : "Thu gọn menu"}
-        >
-          <Menu size={22} />
-          {!collapsed && <span>Thu gọn</span>}
-        </button>
-      </aside>
+      <Sidebar 
+        collapsed={collapsed} 
+        setCollapsed={setCollapsed} 
+        mapLayers={mapLayers} 
+        onToggleLayer={toggleLayer} 
+      />
 
       <main className="storm-main">
-        <header className="storm-header">
-          <div className="header-left">
-            <button
-              className="icon-btn mobile-menu-btn"
-              onClick={() => setCollapsed((prev) => !prev)}
-            >
-              <Menu size={22} />
-            </button>
-
-            <div>
-              <h1>Bản đồ khẩn cấp</h1>
-              <p>Theo dõi cứu trợ, sự cố và shelter quanh bạn</p>
-            </div>
-          </div>
-
-          <div className="header-right">
-            <button className="notification-btn">
-              <Bell size={22} />
-              <span>3</span>
-            </button>
-
-            <div className="user-box">
-              <div className="avatar">
-                <User size={20} />
-              </div>
-
-              <div className="user-info">
-                <strong>{user.fullName || "Người dùng"}</strong>
-                <span>{user.role === "CITIZEN" ? "Công dân" : user.role || "Thành viên"}</span>
-              </div>
-
-              <ChevronDown size={18} />
-            </div>
-
-            <button className="logout-btn" onClick={() => { localStorage.clear(); window.location.href = '/login'; }}>
-              <LogOut size={22} />
-            </button>
-          </div>
-        </header>
+        <Topbar 
+          title="Bản đồ khẩn cấp" 
+          user={user} 
+          notis={notis} 
+          unreadCount={unreadCount} 
+          onToggleSidebar={() => setCollapsed(!collapsed)} 
+        />
 
         <section className="map-shell">
           <div className="map-top-controls">
             <div className="map-search">
-              <Search size={20} />
-              <input placeholder="Tìm địa điểm, địa chỉ..." />
+              <input 
+                placeholder="Tìm địa điểm, địa chỉ..." 
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && searchInput.trim() && setSearchTarget(searchInput)}
+              />
             </div>
 
-            <button className="nearby-filter">
-              <MapPin size={19} />
-              <span>Gần tôi</span>
-              <ChevronDown size={16} />
-            </button>
-
             <div className="map-actions">
-              <button className="map-action sos">
-                <Siren size={18} />
-                <span>Yêu cầu cứu trợ</span>
+              <button className="map-action sos" onClick={() => setIsSupportModalOpen(true)}>
+                <Siren size={18} color="#EA580C" />
+                <span>Gửi yêu cầu</span>
               </button>
-
-              <button className="map-action warning">
-                <TriangleAlert size={18} />
-                <span>Báo cáo sự cố</span>
-              </button>
-
-              <button className="map-action shelter">
-                <House size={18} />
-                <span>Shelter gần nhất</span>
-              </button>
-
-              <button className="map-action route">
-                <Route size={18} />
-                <span>Đường đi an toàn</span>
+              <button className="map-action warning" onClick={() => setIsIncidentModalOpen(true)}>
+                <TriangleAlert size={18} color="#EF4444" />
+                <span>Gửi cảnh báo</span>
               </button>
             </div>
           </div>
 
-          <div className="real-map-container" style={{ position: 'relative', height: 'calc(100vh - 132px)', minHeight: '620px', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 18px 50px rgba(15, 23, 42, 0.12)', border: '1px solid #dbe2ea' }}>
+          <div className="real-map-container">
             <MapView 
               alerts={showAlerts ? alerts : []}
               shelters={showShelters ? shelters : []}
               requests={showRequests ? requests : []}
+              selectedItem={selectedItem}
+              selectedItemType={selectedItemType}
+              externalMyLocation={myLocation}
+              searchTarget={searchTarget}
             />
 
-            {infoPanelOpen && (
+            {infoPanelOpen ? (
               <aside className="nearby-panel">
                 <div className="panel-header">
                   <h3>Thông tin gần bạn</h3>
-
                   <div>
-                    <button>
-                      <Minimize2 size={17} />
-                    </button>
-                    <button onClick={() => setInfoPanelOpen(false)}>
-                      <X size={18} />
-                    </button>
+                    <button><Minimize2 size={17} /></button>
+                    <button onClick={() => setInfoPanelOpen(false)}><X size={18} /></button>
                   </div>
                 </div>
 
                 <div className="nearby-list">
-                  {/* Show active alerts in the sidebar list if visible */}
-                  {showAlerts && alerts.slice(0, 3).map((item) => (
-                    <div key={`alert-${item.id}`} className="nearby-item">
-                      <div className="nearby-icon warning">
-                        <TriangleAlert size={19} />
+                  {locStatus === 'denied' ? (
+                    <p className="no-data">Chưa xác định được vị trí</p>
+                  ) : (
+                    <>
+                      <div className="nearby-section">
+                        <h4 className="section-title">Cảnh báo gần bạn</h4>
+                        {nearbyAlerts.length > 0 ? nearbyAlerts.map(item => (
+                          <div key={`alert-${item.id}`} className="nearby-item">
+                             <div className="nearby-icon warning" style={{ background: '#EF4444' }}>
+                                <TriangleAlert size={19} />
+                            </div>
+                            <div className="nearby-content">
+                                <strong>{item.title}</strong>
+                                <span style={{ color: '#EF4444', fontWeight: 'bold' }}>
+                                    {item.source === 'WEATHER' ? 'NGUY CƠ THIÊN TAI' : item.severityLevel}
+                                </span>
+                            </div>
+                            <button className="item-focus-btn" onClick={() => handleFocusItem(item, 'ALERT')}>Xem</button>
+                          </div>
+                        )) : <p className="no-data">Không có dữ liệu (20km)</p>}
                       </div>
-                      <div className="nearby-content">
-                        <strong>{item.title}</strong>
-                        <span>{item.severityLevel}</span>
+                      <div className="nearby-section">
+                        <h4 className="section-title">Yêu cầu SOS gần bạn</h4>
+                        {nearbyRequests.length > 0 ? nearbyRequests.map(item => (
+                          <div key={`req-${item.id}`} className="nearby-item">
+                            <div className="nearby-icon sos" style={{ background: '#EA580C' }}>SOS</div>
+                            <div className="nearby-content"><strong>{item.requestType}</strong><span>{item.status}</span></div>
+                            <button className="item-focus-btn" onClick={() => handleFocusItem(item, 'REQUEST')}>Xem</button>
+                          </div>
+                        )) : <p className="no-data">Không có dữ liệu (20km)</p>}
                       </div>
-                    </div>
-                  ))}
-
-                  {/* Show support requests in the sidebar list if visible */}
-                  {showRequests && requests.slice(0, 2).map((item) => (
-                    <div key={`req-${item.id}`} className="nearby-item">
-                      <div className="nearby-icon sos">
-                        SOS
+                      <div className="nearby-section">
+                        <h4 className="section-title">Nơi trú ẩn gần bạn</h4>
+                        {nearbyShelters.length > 0 ? nearbyShelters.map(item => (
+                          <div key={`shelter-${item.id}`} className="nearby-item">
+                            <div className="nearby-icon shelter" style={{ background: '#16A34A' }}><House size={18} /></div>
+                            <div className="nearby-content"><strong>{item.name}</strong><span>{item.address}</span></div>
+                            <button className="item-focus-btn" onClick={() => handleFocusItem(item, 'SHELTER')}>Xem</button>
+                          </div>
+                        )) : <p className="no-data">Không có dữ liệu (20km)</p>}
                       </div>
-                      <div className="nearby-content">
-                        <strong>Yêu cầu cứu trợ</strong>
-                        <span>{item.requestType} • {item.status}</span>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Show shelters in the sidebar list if visible */}
-                  {showShelters && shelters.slice(0, 2).map((item) => (
-                    <div key={`shelter-${item.id}`} className="nearby-item">
-                      <div className="nearby-icon shelter">
-                        <House size={18} />
-                      </div>
-                      <div className="nearby-content">
-                        <strong>{item.name}</strong>
-                        <span>{item.address}</span>
-                      </div>
-                    </div>
-                  ))}
+                    </>
+                  )}
                 </div>
-
-                <button className="view-all-btn">Xem tất cả</button>
               </aside>
+            ) : (
+              <button className="nearby-reopen-btn" onClick={() => setInfoPanelOpen(true)}>
+                <ClipboardList size={20} />
+                <span>Thông tin gần bạn</span>
+              </button>
             )}
 
             <div className="map-legend">
-              <div>
-                <span className="dot sos" />
-                Yêu cầu cứu trợ
-              </div>
-
-              <div>
-                <span className="dot warning" />
-                Sự cố
-              </div>
-
-              <div>
-                <span className="dot shelter" />
-                Shelter
-              </div>
+              <div><span className="dot sos" style={{ background: '#EA580C' }} />Yêu cầu SOS</div>
+              <div><span className="dot warning" style={{ background: '#EF4444' }} />Cảnh báo</div>
+              <div><span className="dot shelter" style={{ background: '#10B981' }} />Nơi trú ẩn</div>
             </div>
           </div>
         </section>
       </main>
+      
+      {isSupportModalOpen && (
+        <div className="storm-modal-overlay" onClick={() => setIsSupportModalOpen(false)}>
+          <div className="storm-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header"><h2>Gửi yêu cầu cứu trợ</h2><button className="modal-close-btn" onClick={() => setIsSupportModalOpen(false)}><X size={20} /></button></div>
+            <div className="modal-body"><SupportRequestForm onSuccess={() => setIsSupportModalOpen(false)} /></div>
+          </div>
+        </div>
+      )}
+      {isIncidentModalOpen && (
+        <div className="storm-modal-overlay" onClick={() => setIsIncidentModalOpen(false)}>
+          <div className="storm-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header"><h2 style={{ color: '#EF4444' }}>Báo cáo sự cố khẩn cấp</h2><button className="modal-close-btn" onClick={() => setIsIncidentModalOpen(false)}><X size={20} /></button></div>
+            <div className="modal-body"><IncidentReportForm onSuccess={() => setIsIncidentModalOpen(false)} /></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

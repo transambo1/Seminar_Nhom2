@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getStatusLabel, getStatusStyle } from './SupportCard';
+import { getStatusLabel, getStatusBadgeStyle } from './SupportCard';
 export const getRequestTypeLabel = (type) => {
   const map = {
     RESCUE: 'Cứu hộ',
@@ -118,7 +118,7 @@ const SupportDetailModal = ({ req, onClose, onUpdateStatus, onOpenMap, currentUs
             <strong>Trạng thái:</strong>
             <span
               style={{
-                ...getStatusStyle(req.status),
+                ...getStatusBadgeStyle(req.status),
                 padding: '6px 12px',
                 borderRadius: '999px',
                 fontSize: '0.85rem',
@@ -175,6 +175,21 @@ const SupportDetailModal = ({ req, onClose, onUpdateStatus, onOpenMap, currentUs
             Đóng
           </button>
 
+          <button
+            className="btn btn-primary"
+            style={{
+              padding: '10px 20px',
+              borderRadius: '8px',
+              fontWeight: '600',
+              color: '#fff',
+              background: '#2563EB',
+              border: 'none'
+            }}
+            onClick={() => onOpenMap(req)}
+          >
+            Xem trên bản đồ
+          </button>
+
           {req.isMine ? (
             req.status === 'PENDING' && (
               <button
@@ -191,20 +206,6 @@ const SupportDetailModal = ({ req, onClose, onUpdateStatus, onOpenMap, currentUs
             )
           ) : (
             <>
-              <button
-                className="btn btn-primary"
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  color: '#fff',
-                  border: 'none'
-                }}
-                onClick={() => onOpenMap(req)}
-              >
-                Xem trên bản đồ
-              </button>
-
               {req.status === 'PENDING' && currentUser.role !== 'CITIZEN' && (
                 <button
                   onClick={() => onUpdateStatus(req.id, 'ASSIGNED')}

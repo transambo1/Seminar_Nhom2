@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  APIProvider,
   Map,
   AdvancedMarker,
   Pin,
@@ -8,6 +7,7 @@ import {
   useMap
 } from '@vis.gl/react-google-maps';
 import { MarkerClusterer, SuperClusterAlgorithm } from '@googlemaps/markerclusterer';
+import { useMapState } from '../../context/MapContext';
 
 const FALLBACK_LOCATION = { lat: 10.8231, lng: 106.6297 };
 
@@ -283,6 +283,7 @@ const MapDirectionsRenderer = ({ originLat, originLng, destLat, destLng }) => {
       rendererRef.current = new window.google.maps.DirectionsRenderer({
         map,
         suppressMarkers: false,
+        preserveViewport: false,
         polylineOptions: {
           strokeColor: '#2563eb',
           strokeWeight: 6,
@@ -310,7 +311,6 @@ const MapDirectionsRenderer = ({ originLat, originLng, destLat, destLng }) => {
     );
 
     return () => {
-      // Clean up map route when coordinates change or unmount
       if (rendererRef.current) {
         rendererRef.current.setMap(null);
       }
@@ -320,19 +320,73 @@ const MapDirectionsRenderer = ({ originLat, originLng, destLat, destLng }) => {
   return null;
 };
 
+const MapHandler = ({ selectedItem, selectedItemType, searchTarget, onElementSelect }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (selectedItem && selectedItemType && map) {
+      const lat = Number(selectedItem.latitude);
+      const lng = Number(selectedItem.longitude);
+      
+      if (!isNaN(lat) && !isNaN(lng)) {
+        // Use timeout to ensure map is ready and markers are rendered
+        const timer = setTimeout(() => {
+          map.panTo({ lat, lng });
+          map.setZoom(16);
+          
+          onElementSelect({
+            ...selectedItem,
+            elementType: selectedItemType
+          });
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [selectedItem, selectedItemType, map, onElementSelect]);
+
+  useEffect(() => {
+    if (!searchTarget || !map) return;
+
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ address: searchTarget }, (results, status) => {
+      if (status === 'OK' && results[0]) {
+        const loc = results[0].geometry.location;
+        map.panTo(loc);
+        map.setZoom(15);
+      } else {
+        alert('Không tìm thấy địa điểm: ' + searchTarget);
+      }
+    });
+  }, [searchTarget, map]);
+
+  return null;
+};
+
 const MapView = ({
   shelters = [],
   alerts = [],
   requests = [],
+  selectedItem = null,
+  selectedItemType = null,
   selectedShelter = null,
-  initialRoutingDestination = null
+  initialRoutingDestination = null,
+  externalMyLocation = null,
+  searchTarget = null
 }) => {
-  const [initialCenter, setInitialCenter] = useState(null);
-  const [myLocation, setMyLocation] = useState(null);
+  const { mapViewState, updateMapViewState } = useMapState();
+  const [initialCenter, setInitialCenter] = useState(mapViewState.center || null);
+  const [myLocation, setMyLocation] = useState(externalMyLocation);
   const [selectedElement, setSelectedElement] = useState(null);
-  const [currentZoom, setCurrentZoom] = useState(13);
+  const [currentZoom, setCurrentZoom] = useState(mapViewState.zoom || 13);
   const [mapBounds, setMapBounds] = useState(null);
   const [routingDestination, setRoutingDestination] = useState(initialRoutingDestination || null);
+
+  useEffect(() => {
+    if (externalMyLocation) {
+      setMyLocation(externalMyLocation);
+      if (!initialCenter) setInitialCenter(externalMyLocation);
+    }
+  }, [externalMyLocation, initialCenter]);
 
   useEffect(() => {
     if (initialRoutingDestination) {
@@ -341,8 +395,8 @@ const MapView = ({
   }, [initialRoutingDestination]);
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setInitialCenter(FALLBACK_LOCATION);
+    if (myLocation || !navigator.geolocation) {
+      if (!initialCenter) setInitialCenter(FALLBACK_LOCATION);
       return;
     }
 
@@ -352,21 +406,16 @@ const MapView = ({
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
-
         setMyLocation(loc);
-        setInitialCenter(loc);
+        if (!initialCenter) setInitialCenter(loc);
       },
       () => {
-        console.warn('Không lấy được vị trí, dùng TP.HCM mặc định.');
-        setInitialCenter(FALLBACK_LOCATION);
+        console.warn('Không lấy được vị trí, dùng cached hoặc mặc định.');
+        if (!initialCenter) setInitialCenter(mapViewState.center || FALLBACK_LOCATION);
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-  }, []);
+  }, [myLocation, mapViewState.center, initialCenter]);
 
   const handleMarkerClick = (element, type) => {
     setSelectedElement({
@@ -512,8 +561,7 @@ const MapView = ({
         overflow: 'hidden'
       }}
     >
-      <APIProvider apiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}>
-        <Map
+      <Map
           style={{ width: '100%', height: '100%' }}
           defaultZoom={13}
           defaultCenter={initialCenter}
@@ -522,11 +570,23 @@ const MapView = ({
           disableDefaultUI={false}
           onCameraChanged={(ev) => {
             setCurrentZoom(ev.detail.zoom);
+            // Persist camera state to context
+            updateMapViewState({
+              center: ev.detail.center,
+              zoom: ev.detail.zoom
+            });
           }}
           onBoundsChanged={(ev) => {
             setMapBounds(ev.detail.bounds);
           }}
         >
+          <MapHandler 
+            selectedItem={selectedItem} 
+            selectedItemType={selectedItemType} 
+            searchTarget={searchTarget}
+            onElementSelect={setSelectedElement} 
+          />
+
           <ClusteredMarkers
             key={`shelter-cluster-${shelterMarkers.length}`}
             markers={shelterMarkers}
@@ -630,30 +690,12 @@ const MapView = ({
                     Sức chứa: {selectedElement.currentOccupancy}/
                     {selectedElement.capacity}
 
-                    <button
-                      onClick={() => setRoutingDestination({ lat: Number(selectedElement.latitude), lng: Number(selectedElement.longitude) })}
-                      style={{
-                        display: 'block',
-                        marginTop: '10px',
-                        background: '#103ab9ff',
-                        color: 'white',
-                        border: 'none',
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        width: '100%',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                      }}
-                    >
-                      Đường đi
-                    </button>
-                    {routingDestination && routingDestination.lat === Number(selectedElement.latitude) && (
+                    {routingDestination && routingDestination.lat === Number(selectedElement.latitude) ? (
                       <button
                         onClick={() => setRoutingDestination(null)}
                         style={{
                           display: 'block',
-                          marginTop: '4px',
+                          marginTop: '10px',
                           background: '#ef4444',
                           color: 'white',
                           border: 'none',
@@ -665,7 +707,26 @@ const MapView = ({
                           boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                         }}
                       >
-                        Huỷ
+                        Huỷ lộ trình
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setRoutingDestination({ lat: Number(selectedElement.latitude), lng: Number(selectedElement.longitude) })}
+                        style={{
+                          display: 'block',
+                          marginTop: '10px',
+                          background: '#103ab9ff',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 'bold',
+                          width: '100%',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        Đường đi
                       </button>
                     )}
                   </div>
@@ -673,13 +734,44 @@ const MapView = ({
 
                 {selectedElement.elementType === 'ALERT' && (
                   <div>
-                    <strong style={{ color: '#EF4444' }}>
-                      CẢNH BÁO: {selectedElement.title}
+                    <div style={{ display: 'flex', gap: '4px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                        <span style={{ 
+                            fontSize: '10px', 
+                            padding: '2px 6px', 
+                            borderRadius: '4px', 
+                            background: selectedElement.source === 'WEATHER' ? '#ef4444' : '#4B5563', 
+                            color: 'white',
+                            fontWeight: 'bold'
+                        }}>
+                            {selectedElement.source === 'WEATHER' ? 'NGUY CƠ THỜI TIẾT' : 'XÁC MINH HIỆN TRƯỜNG'}
+                        </span>
+                        <span style={{ 
+                            fontSize: '10px', 
+                            padding: '2px 6px', 
+                            borderRadius: '4px', 
+                            background: selectedElement.severityLevel === 'CRITICAL' ? '#EF4444' : '#F59E0B', 
+                            color: 'white',
+                            fontWeight: 'bold'
+                        }}>
+                            {selectedElement.severityLevel}
+                        </span>
+                    </div>
+                    <strong style={{ color: '#EF4444', display: 'block', marginBottom: '4px' }}>
+                      {selectedElement.title}
                     </strong>
-                    <br />
-                    Mức độ: {selectedElement.severityLevel}
-                    <br />
-                    {selectedElement.description}
+                    {selectedElement.provinceName && (
+                        <div style={{ fontSize: '11px', color: '#4B5563', fontWeight: 'bold', marginBottom: '2px' }}>
+                            Khu vực: {selectedElement.provinceName}
+                        </div>
+                    )}
+                    <div style={{ fontSize: '12px', marginBottom: '6px' }}>
+                        {selectedElement.description}
+                    </div>
+                    {selectedElement.endTime && (
+                        <div style={{ fontSize: '10px', color: '#6B7280', borderTop: '1px solid #E5E7EB', paddingTop: '4px' }}>
+                            Hiệu lực đến: {new Date(selectedElement.endTime).toLocaleString('vi-VN')}
+                        </div>
+                    )}
                   </div>
                 )}
 
@@ -692,13 +784,58 @@ const MapView = ({
                     Số người: {selectedElement.numberOfPeople}
                     <br />
                     {selectedElement.description}
+                    
+                    {routingDestination && routingDestination.lat === Number(selectedElement.latitude) ? (
+                      <button
+                        onClick={() => setRoutingDestination(null)}
+                        style={{
+                          display: 'block',
+                          marginTop: '10px',
+                          background: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 'bold',
+                          width: '100%',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        Huỷ lộ trình
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (!myLocation) {
+                            alert("Không thể xác định vị trí của bạn để chỉ đường. Vui lòng kiểm tra quyền truy cập vị trí.");
+                            return;
+                          }
+                          setRoutingDestination({ lat: Number(selectedElement.latitude), lng: Number(selectedElement.longitude) });
+                        }}
+                        style={{
+                          display: 'block',
+                          marginTop: '10px',
+                          background: '#EA580C',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 'bold',
+                          width: '100%',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        Đường đi
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
             </InfoWindow>
           )}
         </Map>
-      </APIProvider>
     </div>
   );
 };
