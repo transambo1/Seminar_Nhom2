@@ -5,3 +5,5 @@ frontend-react/node_modules/
 frontend-react/node_modules/.cache/
 frontend-react/build/
 backend/**/target/
+
+backend/**/target/
