@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Linking,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Linking, Image
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { C } from '../src/constants/colors';
@@ -38,7 +38,7 @@ export default function AlertDetailScreen() {
   let marker = null;
   try {
     if (params.markerJson) marker = JSON.parse(params.markerJson);
-  } catch (_) {}
+  } catch (_) { }
 
   // Derive display values from real marker OR demo data
   const type = marker?.type || 'flood';
@@ -62,7 +62,7 @@ export default function AlertDetailScreen() {
     { icon: '📡', label: 'Source', value: SOURCE_FULL[source] || source },
     ...(magnitude != null ? [{ icon: '📊', label: 'Magnitude', value: `M${magnitude.toFixed(1)}` }] : []),
     ...(alertLevel ? [{ icon: '🚦', label: 'Alert Level', value: alertLevel }] : []),
-    { icon: '📍', label: 'Coordinates', value: coordLabel(lat, lon) },
+    { icon: '📍', label: 'Coordinates', value: marker?.provinceName || marker?.placeName || coordLabel(lat, lon) },
     { icon: '🕐', label: 'Full Timestamp', value: fullTime },
   ];
 
@@ -112,15 +112,28 @@ export default function AlertDetailScreen() {
                 <Text style={[s.sourcePillTxt, { color: cfg.color }]}>{source}</Text>
               </View>
             </View>
+
             <Text style={s.alertTitle}>{title}</Text>
+
+            {/* 🟢 HIỂN THỊ HÌNH ẢNH (Nếu có từ báo cáo dân sự)
+            {marker?.url && (
+              <View style={s.imageDetailWrapper}>
+                <Image
+                  source={{ uri: marker.url }}
+                  style={s.detailImage}
+                  resizeMode="cover"
+                />
+              </View>
+            )} */}
+
             {magnitude != null && (
               <Text style={[s.magnitudeLine, { color: sev.color }]}>
                 Magnitude M{magnitude.toFixed(1)} · {cfg.label}
               </Text>
             )}
+
             <Text style={s.alertDesc}>{description}</Text>
           </View>
-
           {/* Stats Bento */}
           <View style={s.bento}>
             {stats.map((st, i) => (
@@ -134,7 +147,7 @@ export default function AlertDetailScreen() {
 
           {/* Required Actions */}
           <View style={[s.actionsCard, { backgroundColor: sev.bgColor }]}>
-            <Text style={s.actionsTitle}>🛡️  Required Actions</Text>
+            <Text style={s.actionsTitle}>  Required Actions</Text>
             {actions.map((a, i) => (
               <View key={i} style={s.actionItem}>
                 <Text style={s.actionIcon}>{a.icon}</Text>
@@ -243,4 +256,17 @@ const s = StyleSheet.create({
     borderRadius: 12, alignItems: 'center', justifyContent: 'center',
   },
   srcBtnTxt: { fontSize: 14, fontWeight: '600', color: C.primary },
+  // Thêm vào s = StyleSheet.create({ ... })
+  imageDetailWrapper: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 16,
+    backgroundColor: C.surfaceContainerHigh,
+  },
+  detailImage: {
+    width: '100%',
+    height: '100%',
+  },
 });

@@ -6,37 +6,51 @@ import {
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
+import { router } from 'expo-router';
 import { C } from '../../src/constants/colors';
+import apiClient from '../../src/api/apiClient';
 
+// 1. Cập nhật đúng Enum RequestType từ Backend
 const SUPPORT_TYPES = [
-  { id: 'medical', label: 'Medical', emoji: '🏥' },
-  { id: 'food', label: 'Food / Water', emoji: '💧' },
-  { id: 'rescue', label: 'Rescue', emoji: '🚁' },
+  { id: 'MEDICAL', label: 'Medical', emoji: '🏥' },
+  { id: 'FOOD', label: 'Food', emoji: '🍞' },
+  { id: 'EVACUATION', label: 'Evacuation', emoji: '🏃' },
+  { id: 'RESCUE', label: 'Rescue', emoji: '🚁' },
 ];
-const PRIORITIES = ['Critical', 'High', 'Normal'];
 
-// 🟢 COMPONENT BẢN ĐỒ MINI ĐƯỢC MEMOIZE CHỐNG LAG KHI GÕ PHÍM
-const SupportMiniMap = React.memo(({ coordinate }) => {
+const PRIORITIES = [
+  { id: 'CRITICAL', label: 'Critical' },
+  { id: 'HIGH', label: 'High' },
+  { id: 'NORMAL', label: 'Normal' }
+];
+
+// 2. Component Mini Map đã fix lỗi "Missing display name" và "Unexpected token"
+const SupportMiniMap = React.memo(function SupportMiniMapComponent({ coordinate }) {
   return (
     <View style={s.mapMini}>
       <MapView
         style={StyleSheet.absoluteFillObject}
         provider={PROVIDER_DEFAULT}
         initialRegion={{
-          ...coordinate,
+          latitude: coordinate.latitude,
+          longitude: coordinate.longitude,
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}
         region={{
-          ...coordinate,
+          latitude: coordinate.latitude,
+          longitude: coordinate.longitude,
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}
         pitchEnabled={false}
         rotateEnabled={false}
-        scrollEnabled={false} // Khóa cuộn để làm mini map hiển thị
+        scrollEnabled={false}
       >
-        <Marker coordinate={coordinate}>
+        <Marker coordinate={{
+          latitude: coordinate.latitude,
+          longitude: coordinate.longitude,
+        }}>
           <View style={s.mapDot} />
         </Marker>
       </MapView>
@@ -49,98 +63,106 @@ const SupportMiniMap = React.memo(({ coordinate }) => {
   );
 });
 
-// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 export default function SupportScreen() {
   const [supportType, setSupportType] = useState(null);
-  const [priority, setPriority] = useState('Critical');
-  const [location, setLocation] = useState('');
+  const [priority, setPriority] = useState('CRITICAL');
+  const [locationName, setLocationName] = useState('');
   const [description, setDescription] = useState('');
+  const [numPeople, setNumPeople] = useState('1');
+  const [recentRequests, setRecentRequests] = useState([]);
   
-  // State phục vụ vị trí thật
-  const [coordinate, setCoordinate] = useState({ latitude: 10.762622, longitude: 106.660172 });
-  const [locationLoading, setLocationLoading] = useState(false);
+  const [coordinate, setCoordinate] = useState({ latitude: 10.7626, longitude: 106.6601 });
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Tự động lấy vị trí khi mở trang
+  // Lấy userId mặc định từ profile Trần Lâm Thành
+  const currentUserId = 1; 
+
   useEffect(() => {
     handleAutoDetect();
+    fetchMyRequests();
   }, []);
 
+  const fetchMyRequests = async () => {
+    try {
+      const res = await apiClient.get('/api/v1/support-requests/my');
+      setRecentRequests(res.data.slice(0, 3));
+    } catch (e) { console.warn(e); }
+  };
+
   const handleAutoDetect = async () => {
-    setLocationLoading(true);
+    setLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Lỗi quyền', 'Vui lòng cấp quyền vị trí để lấy tọa độ tự động.');
-        setLocationLoading(false);
-        return;
-      }
-
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      if (status !== 'granted') return;
+      const pos = await Location.getCurrentPositionAsync({});
       const currentCoord = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
       setCoordinate(currentCoord);
-
-      // Dịch tọa độ ra địa chỉ text
       const reverseGeo = await Location.reverseGeocodeAsync(currentCoord);
       if (reverseGeo.length > 0) {
-        const place = reverseGeo[0];
-        const addr = [place.name, place.street, place.district, place.city].filter(Boolean).join(', ');
-        setLocation(addr);
-      } else {
-        setLocation(`${currentCoord.latitude.toFixed(4)}, ${currentCoord.longitude.toFixed(4)}`);
+        const p = reverseGeo[0];
+        setLocationName([p.streetNumber, p.street, p.district, p.city].filter(Boolean).join(', '));
       }
-    } catch (error) {
-      console.warn(error);
-    } finally {
-      setLocationLoading(false);
-    }
+    } catch (error) { console.warn(error); }
+    finally { setLoading(false); }
   };
 
-  const submit = () => {
-    if (!supportType) {
-      Alert.alert('Missing Info', 'Please select a type of support.');
+  const handleSubmit = async () => {
+    if (!supportType || !description) {
+      Alert.alert('Missing Info', 'Please select support type and describe your situation.');
       return;
     }
-    Alert.alert('🆘 Request Submitted', 'Emergency services have been notified. Stay calm and remain visible.', [{ text: 'OK' }]);
-  };
 
-  // Hàm hỗ trợ đổi màu theo Priority
-  const getPriorityStyle = (p) => {
-    if (priority !== p) return s.priorityInactive;
-    if (p === 'Critical') return { backgroundColor: C.error, borderColor: C.error };
-    if (p === 'High') return { backgroundColor: '#E65100', borderColor: '#E65100' }; // Màu cam đậm
-    if (p === 'Normal') return { backgroundColor: C.primary, borderColor: C.primary }; // Màu xanh chủ đạo
+    setSubmitting(true);
+    try {
+      // Payload khớp hoàn toàn với SupportCreateRequest.java
+      const payload = {
+        userId: currentUserId,
+        requestType: supportType,
+        description: description.trim(),
+        numberOfPeople: parseInt(numPeople) || 1,
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude,
+        priorityLevel: priority
+      };
+
+      const response = await apiClient.post('/api/v1/support-requests', payload);
+
+      if (response.status === 201 || response.status === 200) {
+        Alert.alert('🆘 Success', 'Emergency request submitted. Stay safe.');
+        setDescription('');
+        setSupportType(null);
+        fetchMyRequests();
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not submit request. Check server connection.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <SafeAreaView style={s.root}>
-      {/* 🟢 Bọc KeyboardAvoidingView để đẩy nội dung lên khi mở bàn phím */}
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        <View style={s.header}>
-          <Text style={s.brand}>STORMSHIELD</Text>
-        </View>
-        <ScrollView style={s.scroll} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <View style={s.header}><Text style={s.brand}>STORMSHIELD</Text></View>
+        <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
           <View style={s.titleWrap}>
             <Text style={s.pageTitle}>Support Requests</Text>
-            <Text style={s.pageDesc}>Submit a new request for emergency assistance or view the status of your existing requests.</Text>
+            <Text style={s.pageDesc}>Yêu cầu cứu hộ khẩn cấp đến lực lượng chức năng.</Text>
           </View>
 
-          {/* Emergency Banner */}
           <View style={s.emergencyBanner}>
             <Text style={s.emergencyIcon}>🚨</Text>
             <View style={{ flex: 1 }}>
               <Text style={s.emergencyTitle}>Life-Threatening Emergency?</Text>
-              <Text style={s.emergencyDesc}>Do not use this form. Call 911 or your local emergency response authority immediately.</Text>
+              <Text style={s.emergencyDesc}>Gọi ngay 113, 114 hoặc 115 nếu đang gặp nguy hiểm trực tiếp.</Text>
             </View>
           </View>
 
-          {/* Support Type */}
           <View style={s.card}>
             <Text style={s.cardTitle}>Type of Support</Text>
-            <View style={s.typeRow}>
+            {/* 🟢 Bố cục 2:2 Grid */}
+            <View style={s.typeGrid}>
               {SUPPORT_TYPES.map(t => (
                 <TouchableOpacity
                   key={t.id}
@@ -148,114 +170,69 @@ export default function SupportScreen() {
                   onPress={() => setSupportType(t.id)}
                 >
                   <Text style={s.typeEmoji}>{t.emoji}</Text>
-                  <Text style={[s.typeLabel, supportType === t.id && { color: C.primary, fontWeight: '800' }]}>
-                    {t.label}
-                  </Text>
+                  <Text style={[s.typeLabel, supportType === t.id && { color: C.primary }]}>{t.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
 
-          {/* Priority Level */}
           <View style={s.card}>
             <Text style={s.cardTitle}>Priority Level</Text>
             <View style={s.priorityRow}>
               {PRIORITIES.map(p => (
                 <TouchableOpacity
-                  key={p}
-                  style={[s.priorityBtn, getPriorityStyle(p)]}
-                  onPress={() => setPriority(p)}
+                  key={p.id}
+                  style={[s.priorityBtn, priority === p.id ? { backgroundColor: p.id === 'CRITICAL' ? C.error : p.id === 'HIGH' ? '#E65100' : C.primary } : s.priorityInactive]}
+                  onPress={() => setPriority(p.id)}
                 >
-                  {p === 'Critical' && priority === p && <Text style={{fontSize: 12}}>❗</Text>}
-                  <Text style={[
-                    s.priorityTxt,
-                    priority === p ? { color: '#fff' } : { color: C.onSurfaceVariant },
-                  ]}>
-                    {p.toUpperCase()}
-                  </Text>
+                  <Text style={[s.priorityTxt, priority === p.id ? { color: '#fff' } : { color: C.onSurfaceVariant }]}>{p.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
 
-          {/* Current Location */}
           <View style={s.card}>
-            <Text style={s.cardTitle}>Current Location</Text>
+            <Text style={s.cardTitle}>Number of People</Text>
+            <TextInput style={s.inputSmall} keyboardType="numeric" value={numPeople} onChangeText={setNumPeople} />
+            <Text style={[s.cardTitle, { marginTop: 16 }]}>Location</Text>
             <View style={s.locRow}>
-              <Text style={s.locIcon}>📍</Text>
-              <TextInput
-                style={s.locInput}
-                value={location}
-                onChangeText={setLocation}
-                placeholder="Enter location or auto-detect..."
-              />
-              <TouchableOpacity style={s.autoBtn} onPress={handleAutoDetect} disabled={locationLoading}>
-                {locationLoading ? (
-                  <ActivityIndicator color={C.primary} size="small" />
-                ) : (
-                  <Text style={s.autoBtnTxt}>📍 Auto-detect</Text>
-                )}
-              </TouchableOpacity>
+              <TextInput style={s.locInput} value={locationName} editable={false} />
+              <TouchableOpacity style={s.autoBtn} onPress={handleAutoDetect}><Text style={s.autoBtnTxt}>📍 Reset</Text></TouchableOpacity>
             </View>
-            
-            {/* 🟢 Gọi Bản đồ Mini đã được chống giật */}
             <SupportMiniMap coordinate={coordinate} />
           </View>
 
-          {/* Description */}
           <View style={s.card}>
-            <View style={s.descHeader}>
-              <Text style={s.cardTitle}>Description of Situation</Text>
-              <Text style={s.optional}>Optional</Text>
-            </View>
-            <TextInput
-              style={[s.input, s.textarea]}
-              placeholder="Please provide specific details about your situation, number of people, and immediate needs..."
-              placeholderTextColor={C.outline}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+            <Text style={s.cardTitle}>Description</Text>
+            <TextInput style={[s.input, s.textarea]} multiline value={description} onChangeText={setDescription} placeholder="Describe your needs..." />
           </View>
 
-          {/* Submit */}
-          <TouchableOpacity style={s.submitBtn} onPress={submit} activeOpacity={0.85}>
-            <Text style={s.submitTxt}>➤  SUBMIT CRITICAL REQUEST</Text>
+          <TouchableOpacity style={s.submitBtn} onPress={handleSubmit} disabled={submitting}>
+            {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.submitTxt}>➤  SUBMIT REQUEST</Text>}
           </TouchableOpacity>
 
-          {/* Recent Activity */}
-          <View style={s.card}>
-            <Text style={s.cardTitle}>Recent Activity</Text>
-            <View style={s.activityItem}>
-              <View style={s.actRow}>
-                <View style={[s.actDot, { backgroundColor: C.tertiaryFixedDim }]} />
-                <Text style={s.actStatus}>PENDING</Text>
-                <Text style={s.actTime}>10 mins ago</Text>
-              </View>
-              <Text style={s.actTitle}>Medical Assistance</Text>
-              <Text style={s.actDesc}>Need insulin supply at shelter 4...</Text>
-              <Text style={s.actLoc}>📍 Sector 7G Shelter</Text>
+          {recentRequests.length > 0 && (
+            <View style={s.card}>
+              <Text style={s.cardTitle}>Recent Activity</Text>
+              {recentRequests.map(req => (
+                <View key={req.id} style={s.activityItem}>
+                  <View style={s.actRow}>
+                    <View style={[s.actDot, { backgroundColor: req.status === 'PENDING' ? '#f59e0b' : '#16a34a' }]} />
+                    <Text style={s.actStatus}>{req.status}</Text>
+                  </View>
+                  <Text style={s.actTitle}>{req.requestType}</Text>
+                  <Text style={s.actDesc} numberOfLines={1}>{req.description}</Text>
+                </View>
+              ))}
             </View>
-            <View style={[s.activityItem, { opacity: 0.7 }]}>
-              <View style={s.actRow}>
-                <View style={[s.actDot, { backgroundColor: C.surfaceTint || '#16a34a' }]} />
-                <Text style={s.actStatus}>RESOLVED</Text>
-                <Text style={s.actTime}>2 days ago</Text>
-              </View>
-              <Text style={s.actTitle}>Evacuation Transport</Text>
-              <Text style={s.actDesc}>Family of 4 needs transport from flood zone.</Text>
-            </View>
-          </View>
-          <View style={{ height: 24 }} />
+          )}
+          <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-// ─── STYLES ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
   header: { alignItems: 'center', paddingVertical: 14, backgroundColor: C.surfaceContainerLowest, borderBottomWidth: 1, borderBottomColor: C.outlineVariant },
@@ -263,49 +240,38 @@ const s = StyleSheet.create({
   scroll: { flex: 1 },
   titleWrap: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 4 },
   pageTitle: { fontSize: 28, fontWeight: '900', color: C.onSurface },
-  pageDesc: { fontSize: 14, color: C.onSurfaceVariant, marginTop: 4, lineHeight: 20 },
-  emergencyBanner: { flexDirection: 'row', gap: 12, marginHorizontal: 16, marginTop: 16, backgroundColor: C.errorContainer + 'AA', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: C.error + '50' },
+  pageDesc: { fontSize: 14, color: C.onSurfaceVariant, marginTop: 4 },
+  emergencyBanner: { flexDirection: 'row', gap: 12, marginHorizontal: 16, marginTop: 16, backgroundColor: '#FEF2F2', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#FCA5A5' },
   emergencyIcon: { fontSize: 24 },
-  emergencyTitle: { fontSize: 14, fontWeight: '700', color: C.error },
-  emergencyDesc: { fontSize: 13, color: C.onSurface, marginTop: 2, lineHeight: 18 },
-  card: { marginHorizontal: 16, marginTop: 14, backgroundColor: C.surfaceContainerLowest, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: C.outlineVariant, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: C.onSurface, marginBottom: 12 },
-  
-  typeRow: { flexDirection: 'row', gap: 8 },
-  typeCell: { flex: 1, borderWidth: 1, borderColor: C.outlineVariant, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: C.surface },
-  typeCellActive: { borderColor: C.primary, borderWidth: 2, backgroundColor: C.primaryFixed },
+  emergencyTitle: { fontSize: 14, fontWeight: '700', color: '#B91C1C' },
+  emergencyDesc: { fontSize: 13, color: '#444', marginTop: 2 },
+  card: { marginHorizontal: 16, marginTop: 14, backgroundColor: C.surfaceContainerLowest, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: C.outlineVariant },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: C.onSurface, marginBottom: 12 },
+  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  typeCell: { width: '48%', borderWidth: 1, borderColor: C.outlineVariant, borderRadius: 12, paddingVertical: 16, alignItems: 'center', backgroundColor: C.surface },
+  typeCellActive: { borderColor: C.primary, borderWidth: 2, backgroundColor: '#EEF2FF' },
   typeEmoji: { fontSize: 26 },
-  typeLabel: { fontSize: 11, fontWeight: '600', color: C.onSurface, textAlign: 'center' }, // 🟢 Ép căn giữa và giảm size chữ
-  
+  typeLabel: { fontSize: 11, fontWeight: '800', marginTop: 4 },
   priorityRow: { flexDirection: 'row', gap: 8 },
-  priorityBtn: { flex: 1, height: 40, borderRadius: 99, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
-  priorityInactive: { backgroundColor: 'transparent', borderWidth: 1, borderColor: C.outlineVariant },
+  priorityBtn: { flex: 1, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  priorityInactive: { borderWidth: 1, borderColor: C.outlineVariant },
   priorityTxt: { fontSize: 12, fontWeight: '700' },
-  
-  locRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  locIcon: { fontSize: 18 },
-  locInput: { flex: 1, height: 46, borderWidth: 1, borderColor: C.outlineVariant, borderRadius: 10, paddingHorizontal: 12, fontSize: 13, color: C.onSurface, backgroundColor: C.surfaceContainerLow },
-  autoBtn: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, backgroundColor: C.primaryFixed, height: 46, justifyContent: 'center' },
+  inputSmall: { width: 80, height: 40, borderWidth: 1, borderColor: C.outlineVariant, borderRadius: 8, textAlign: 'center' },
+  locRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  locInput: { flex: 1, height: 46, borderWidth: 1, borderColor: C.outlineVariant, borderRadius: 10, paddingHorizontal: 12, backgroundColor: C.surfaceContainerLow },
+  autoBtn: { paddingHorizontal: 12, backgroundColor: C.primaryFixed, borderRadius: 10, justifyContent: 'center' },
   autoBtnTxt: { fontSize: 11, fontWeight: '700', color: C.primary },
-  
-  // BẢN ĐỒ MINI MỚI
-  mapMini: { marginTop: 12, height: 120, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: C.outlineVariant },
-  mapDot: { width: 16, height: 16, borderRadius: 8, backgroundColor: C.primary, borderWidth: 3, borderColor: '#fff', shadowColor: C.primary, shadowOpacity: 0.5, shadowRadius: 6, elevation: 4 },
-  
-  descHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  optional: { fontSize: 12, color: C.outline },
-  input: { borderWidth: 1, borderColor: C.outlineVariant, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: C.onSurface, backgroundColor: C.surfaceContainerLow },
-  textarea: { height: 100, paddingTop: 12 },
-  
-  submitBtn: { marginHorizontal: 16, marginTop: 16, height: 54, backgroundColor: C.error, borderRadius: 14, alignItems: 'center', justifyContent: 'center', shadowColor: C.error, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  mapMini: { height: 120, borderRadius: 12, overflow: 'hidden' },
+  mapDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: C.primary, borderWidth: 2, borderColor: '#fff' },
+  input: { borderWidth: 1, borderColor: C.outlineVariant, borderRadius: 12, padding: 12, backgroundColor: C.surfaceContainerLow },
+  textarea: { height: 100, textAlignVertical: 'top' },
+  submitBtn: { marginHorizontal: 16, marginTop: 16, height: 56, backgroundColor: C.error, borderRadius: 16, alignItems: 'center', justifyContent: 'center', elevation: 4 },
   submitTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  
-  activityItem: { borderTopWidth: 1, borderTopColor: C.outlineVariant, paddingTop: 12, marginTop: 8, gap: 4 },
+  activityItem: { borderTopWidth: 1, borderTopColor: C.outlineVariant, paddingTop: 12, marginTop: 8 },
   actRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actDot: { width: 8, height: 8, borderRadius: 4 },
-  actStatus: { fontSize: 10, fontWeight: '700', color: C.onSurface, textTransform: 'uppercase', letterSpacing: 0.5 },
+  actStatus: { fontSize: 10, fontWeight: '800' },
   actTime: { fontSize: 11, color: C.onSurfaceVariant, marginLeft: 'auto' },
-  actTitle: { fontSize: 15, fontWeight: '700', color: C.onSurface },
+  actTitle: { fontSize: 15, fontWeight: '700', marginTop: 4 },
   actDesc: { fontSize: 13, color: C.onSurfaceVariant },
-  actLoc: { fontSize: 12, color: C.onSurfaceVariant },
 });

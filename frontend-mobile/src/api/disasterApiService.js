@@ -1,6 +1,6 @@
 // StormShield – Disaster API Service
 // Sources: USGS, GDACS, NASA EONET, OpenWeatherMap
-
+import apiClient from './apiClient';
 const OWM_API_KEY = 'e21c1a2b8eb0d658f6915654590ef161';
 
 const ENDPOINTS = {
@@ -28,6 +28,129 @@ const eonetToType = (id) => ({
   wildfires: 'wildfire', severeStorms: 'storm', volcanoes: 'volcano',
   floods: 'flood', earthquakes: 'earthquake',
 }[id] || 'other');
+
+export const fetchInternalAlerts = async () => {
+  try {
+    const res = await apiClient.get('/api/v1/alerts/active');
+    return res.data.map(item => ({
+      id: `internal_${item.id}`,
+      type: item.alertType?.toLowerCase() || 'other',
+      severity: item.severityLevel?.toLowerCase() || 'low',
+      title: item.title,
+      description: item.description,
+      coordinate: { latitude: item.latitude, longitude: item.longitude },
+      source: 'StormShield', // Nguồn nội bộ
+      time: item.startTime || new Date().toISOString(),
+      provinceName: item.provinceName,
+      url: null,
+      placeName: item.affectedArea,
+      magnitude: null,
+      alertLevel: item.severityLevel,
+      isInternal: true, // Đánh dấu để UI có thể phân biệt nếu muốn
+    }));
+  } catch (e) {
+    console.warn('[Internal Alerts]', e.message);
+    return [];
+  }
+};
+
+// 🟢 MỚI: Fetch báo cáo hiện trường từ người dân
+export const fetchInternalIncidents = async () => {
+  try {
+    const res = await apiClient.get('/api/v1/incident-reports');
+    return res.data.map(item => ({
+      id: `report_${item.id}`,
+      type: item.incidentType?.toLowerCase() || 'other',
+      severity: item.severityLevel?.toLowerCase() || 'low',
+      title: `Report: ${item.title}`,
+      description: item.description,
+      coordinate: { latitude: item.latitude, longitude: item.longitude },
+      source: 'Citizen Report',
+      time: item.createdAt || new Date().toISOString(),
+      url: item.imageUrl || null,
+      placeName: item.affectedArea,
+      magnitude: null,
+      alertLevel: item.status,
+    }));
+  } catch (e) {
+    console.warn('[Internal Incidents]', e.message);
+    return [];
+  }
+};
+
+export const fetchAllDisasterData = async (userLocation = null) => {
+  const tasks = [
+    fetchUSGSEarthquakes(), 
+    fetchGDACSEvents(), 
+    fetchNASAEONET(),
+    fetchInternalAlerts(),   // 🟢 Thêm BE vào đây
+    fetchInternalIncidents() // 🟢 Thêm BE vào đây
+  ];
+  
+  if (userLocation) tasks.push(fetchOWMAlerts(userLocation.latitude, userLocation.longitude));
+  
+  const results = await Promise.allSettled(tasks);
+  const markers = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+  
+  const seen = new Set();
+  return markers.filter(m => {
+    if (seen.has(m.id)) return false;
+    seen.add(m.id);
+    return true;
+  });
+};
+
+export const fetchInternalShelters = async (status = null) => {
+  try {
+    // Gọi endpoint GET /api/v1/shelters từ BE
+    const res = await apiClient.get('/api/v1/shelters', {
+      params: status ? { status } : {}
+    });
+    
+    return res.data.map(item => ({
+      id: `internal_shelter_${item.id}`,
+      name: item.name,
+      address: item.address,
+      latitude: item.latitude,
+      longitude: item.longitude,
+      coordinate: { latitude: item.latitude, longitude: item.longitude },
+      capacity: item.currentOccupancy || 0, // Số người đang ở
+      maxCapacity: item.capacity,           // Sức chứa tối đa
+      status: item.status,                  // AVAILABLE, FULL, v.v.
+      contactPhone: item.contactPhone,
+      managedBy: item.managedBy,
+      petFriendly: true, // BE hiện chưa có trường này, tạm để true
+      isInternal: true
+    }));
+  } catch (e) {
+    console.warn('[Internal Shelters Error]', e.message);
+    return [];
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const fetchUSGSEarthquakes = async () => {
   try {
@@ -117,11 +240,3 @@ export const fetchOWMAlerts = async (lat, lon) => {
   } catch (e) { console.warn('[OWM]', e.message); return []; }
 };
 
-export const fetchAllDisasterData = async (userLocation = null) => {
-  const tasks = [fetchUSGSEarthquakes(), fetchGDACSEvents(), fetchNASAEONET()];
-  if (userLocation) tasks.push(fetchOWMAlerts(userLocation.latitude, userLocation.longitude));
-  const results = await Promise.allSettled(tasks);
-  const markers = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
-  const seen = new Set();
-  return markers.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
-};
