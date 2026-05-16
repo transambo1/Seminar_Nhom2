@@ -47,16 +47,21 @@ const RescueTeamManagement = () => {
 
   const handleCreateTeam = async (e) => {
     e.preventDefault();
+    const leaderPayload = {
+      fullName: formData.leaderFullName,
+      email: formData.leaderEmail,
+      phone: formData.leaderPhone,
+      password: formData.leaderPassword,
+      role: "RESCUE_LEADER"
+    };
+
+    console.log("Submitting leader account payload:", leaderPayload);
+
     try {
       // 1. Create Leader Account first
-      const leaderRes = await createRescueAccountApi({
-        fullName: formData.leaderFullName,
-        email: formData.leaderEmail,
-        phone: formData.leaderPhone,
-        password: formData.leaderPassword,
-        role: "RESCUE_LEADER"
-      });
+      const leaderRes = await createRescueAccountApi(leaderPayload);
 
+      console.log("Leader account created successfully:", leaderRes.data);
       const leaderId = leaderRes.data.id;
 
       // 2. Create Rescue Team with the new leaderId
@@ -80,12 +85,14 @@ const RescueTeamManagement = () => {
         alert("Đã tạo đội cứu hộ và tài khoản đội trưởng thành công!");
       } catch (teamErr) {
         console.error("Team creation error:", teamErr);
-        alert("Đã tạo tài khoản đội trưởng nhưng tạo đội thất bại, vui lòng kiểm tra lại thông tin đội.");
+        const errorMsg = teamErr.response?.data?.message || teamErr.response?.data?.error || "Tạo đội thất bại";
+        alert(`Đã tạo tài khoản đội trưởng (ID: ${leaderId}) nhưng tạo đội thất bại: ${errorMsg}`);
       }
     } catch (authErr) {
       console.error("Auth creation error:", authErr);
-      const msg = authErr.response?.data?.message || "Lỗi khi tạo tài khoản đội trưởng";
-      alert(msg);
+      const serverError = authErr.response?.data;
+      const errorMsg = serverError?.message || serverError?.error || (typeof serverError === 'object' ? JSON.stringify(serverError) : null) || "Lỗi khi tạo tài khoản đội trưởng";
+      alert(`Lỗi 400: ${errorMsg}`);
     }
   };
 

@@ -74,12 +74,48 @@ const adminMenuItems = [
   },
 ];
 
+const leaderMenuItems = [
+  {
+    key: "leader-home",
+    label: "Trang chủ",
+    icon: Home,
+    path: "/dashboard"
+  },
+  {
+    key: "leader-requests",
+    label: "Danh sách nhiệm vụ",
+    icon: Shield,
+    path: "/leader/requests"
+  },
+  {
+    key: "leader-team",
+    label: "Đội của tôi",
+    icon: Users,
+    path: "/leader/team"
+  },
+  {
+    key: "leader-notifications",
+    label: "Thông báo",
+    icon: FileWarning,
+    path: "/notifications"
+  }
+];
+
 export default function Sidebar({ collapsed, setCollapsed, mapLayers, onToggleLayer }) {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const isAdminPath = location.pathname.startsWith('/admin');
-  const filteredMenuItems = isAdminPath ? adminMenuItems : citizenMenuItems;
+  // Get user role from localStorage
+  const userStr = localStorage.getItem('user') || localStorage.getItem('currentUser');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const userRole = user?.role || 'CITIZEN';
+
+  let filteredMenuItems = citizenMenuItems;
+  if (userRole === 'ADMIN') {
+    filteredMenuItems = adminMenuItems;
+  } else if (userRole === 'RESCUE_LEADER') {
+    filteredMenuItems = leaderMenuItems;
+  }
 
   return (
     <aside className={`storm-sidebar ${collapsed ? "collapsed" : ""}`}>

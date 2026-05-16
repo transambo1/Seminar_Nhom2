@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface RescueTeamMemberRepository extends JpaRepository<RescueTeamMember, Long> {
     List<RescueTeamMember> findByTeamId(Long teamId);
+    void deleteByTeamIdAndUserId(Long teamId, Long userId);
+    boolean existsByTeamIdAndUserId(Long teamId, Long userId);
 }

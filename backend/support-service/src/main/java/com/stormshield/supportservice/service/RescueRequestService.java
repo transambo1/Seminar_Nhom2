@@ -82,14 +82,17 @@ public class RescueRequestService {
     public RescueRequestResponse assignTeam(Long id, SupportAssignRequest assignDto) {
         RescueRequest req = repository.findById(id).orElseThrow(() -> new RuntimeException("Request not found"));
 
-        if (req.getStatus() != RequestStatus.PENDING && req.getAssignmentStatus() == AssignmentStatus.UNASSIGNED) {
-            // Optional: allow re-assignment if explicitly requested
-        }
-
         req.setAssignedTeamId(assignDto.getAssignedTeamId());
+        req.setAssignedRescueUserId(assignDto.getAssignedRescueUserId());
         req.setStatus(RequestStatus.ASSIGNED);
-        req.setAssignmentStatus(AssignmentStatus.MANUALLY_ASSIGNED);
-        req.setAssignmentReason("Phân công thủ công bởi quản trị viên");
+        
+        if (assignDto.getAssignedRescueUserId() != null) {
+            req.setAssignmentStatus(AssignmentStatus.MANUALLY_ASSIGNED);
+            req.setAssignmentReason("Đội trưởng đã phân công thành viên phụ trách");
+        } else {
+            req.setAssignmentStatus(AssignmentStatus.TEAM_ASSIGNED_NO_MEMBER);
+            req.setAssignmentReason("Phân công cho đội, đang chờ đội trưởng chỉ định thành viên");
+        }
 
         RescueRequest updated = repository.save(req);
         publishNotification(updated, "ASSIGNED");

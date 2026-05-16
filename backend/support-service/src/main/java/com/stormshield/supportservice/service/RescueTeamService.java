@@ -69,15 +69,26 @@ public class RescueTeamService {
     }
 
     @Transactional
-    public RescueTeamMemberResponse addMemberToTeam(Long teamId, RescueTeamMemberCreateRequest request) {
-        if (!teamRepository.existsById(teamId)) {
-            throw new RuntimeException("Team not found");
+    public RescueTeamMemberResponse addMemberToTeam(Long teamId, RescueTeamMemberCreateRequest request, Long callerId, String callerRole) {
+        RescueTeam team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đội cứu hộ."));
+
+        // Validation: If caller is RESCUE_LEADER, they must be the leader of this team
+        if ("RESCUE_LEADER".equals(callerRole)) {
+            if (!team.getLeaderId().equals(callerId)) {
+                throw new RuntimeException("Bạn không có quyền thêm thành viên vào đội của người khác.");
+            }
+        }
+
+        // Validation: Prevent duplicate members in the same team
+        if (memberRepository.existsByTeamIdAndUserId(teamId, request.getUserId())) {
+            throw new RuntimeException("Người dùng này đã là thành viên của đội.");
         }
 
         RescueTeamMember member = RescueTeamMember.builder()
                 .teamId(teamId)
                 .userId(request.getUserId())
-                .memberRole(request.getMemberRole())
+                .memberRole(request.getMemberRole() != null ? request.getMemberRole() : RescueMemberRole.MEMBER)
                 .status(RescueMemberStatus.AVAILABLE)
                 .currentLoad(0)
                 .build();
@@ -86,10 +97,16 @@ public class RescueTeamService {
         return mapToMemberResponse(savedMember);
     }
 
+
     public List<RescueTeamMemberResponse> getTeamMembers(Long teamId) {
         return memberRepository.findByTeamId(teamId).stream()
                 .map(this::mapToMemberResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void removeMemberFromTeam(Long teamId, Long userId) {
+        memberRepository.deleteByTeamIdAndUserId(teamId, userId);
     }
 
     private RescueTeamResponse mapToTeamResponse(RescueTeam team) {

@@ -35,6 +35,13 @@ public class RescueTeamController {
         return ResponseEntity.ok(teamService.getAllTeams());
     }
 
+    @GetMapping("/my-team")
+    @Operation(summary = "Get current leader's team")
+    public ResponseEntity<RescueTeamResponse> getMyTeam(
+            @RequestHeader(value = "X-User-Id") Long leaderId) {
+        return ResponseEntity.ok(teamService.getTeamByLeaderId(leaderId));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get rescue team by ID")
     public ResponseEntity<RescueTeamResponse> getTeamById(@PathVariable Long id) {
@@ -51,13 +58,22 @@ public class RescueTeamController {
     @Operation(summary = "Add a member to a rescue team")
     public ResponseEntity<RescueTeamMemberResponse> addMember(
             @PathVariable Long id,
-            @Valid @RequestBody RescueTeamMemberCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(teamService.addMemberToTeam(id, request));
+            @Valid @RequestBody RescueTeamMemberCreateRequest request,
+            @RequestHeader(value = "X-User-Id") Long userId,
+            @RequestHeader(value = "X-User-Role") String userRole) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(teamService.addMemberToTeam(id, request, userId, userRole));
     }
 
     @GetMapping("/{id}/members")
     @Operation(summary = "Get all members of a rescue team")
     public ResponseEntity<List<RescueTeamMemberResponse>> getMembers(@PathVariable Long id) {
         return ResponseEntity.ok(teamService.getTeamMembers(id));
+    }
+
+    @DeleteMapping("/{id}/members/{userId}")
+    @Operation(summary = "Remove a member from a rescue team")
+    public ResponseEntity<Void> removeMember(@PathVariable Long id, @PathVariable Long userId) {
+        teamService.removeMemberFromTeam(id, userId);
+        return ResponseEntity.noContent().build();
     }
 }

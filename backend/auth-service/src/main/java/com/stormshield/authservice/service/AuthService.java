@@ -96,19 +96,45 @@ public class AuthService {
 
     public UserResponse createRescueAccount(CreateRescueAccountRequest request) {
         UserRole role = UserRole.RESCUE;
-        if (request.getRole() != null) {
+        if (request.getRole() != null && !request.getRole().isBlank()) {
             try {
                 role = UserRole.valueOf(request.getRole().toUpperCase());
-                if (role == UserRole.ADMIN) {
-                    throw new IllegalArgumentException("Cannot create ADMIN account through this endpoint");
+                
+                // Security check: Only RESCUE or RESCUE_LEADER allowed
+                if (role != UserRole.RESCUE && role != UserRole.RESCUE_LEADER) {
+                    throw new IllegalArgumentException("Chỉ cho phép tạo tài khoản với vai trò RESCUE hoặc RESCUE_LEADER.");
                 }
             } catch (IllegalArgumentException e) {
-                if (e.getMessage() != null && e.getMessage().contains("ADMIN")) throw e;
-                // Default to RESCUE if role is invalid
+                if (e.getMessage() != null && e.getMessage().contains("vai trò")) throw e;
+                throw new IllegalArgumentException("Vai trò không hợp lệ: " + request.getRole());
             }
         }
         return createInternalAccountFromSpecificRequest(request, role);
     }
+
+    public UserResponse createRescueMember(CreateRescueAccountRequest request) {
+        // Validation: Role must be RESCUE if provided, or default to RESCUE
+        UserRole role = UserRole.RESCUE;
+        if (request.getRole() != null && !request.getRole().isBlank()) {
+            try {
+                role = UserRole.valueOf(request.getRole().toUpperCase());
+                if (role != UserRole.RESCUE) {
+                    throw new IllegalArgumentException("Đội trưởng chỉ có quyền tạo tài khoản với vai trò RESCUE.");
+                }
+            } catch (IllegalArgumentException e) {
+                if (e.getMessage() != null && e.getMessage().contains("quyền tạo")) throw e;
+                throw new IllegalArgumentException("Vai trò không hợp lệ: " + request.getRole());
+            }
+        }
+
+        // Validation: Password length
+        if (request.getPassword() == null || request.getPassword().length() < 6) {
+            throw new IllegalArgumentException("Mật khẩu phải có ít nhất 6 ký tự.");
+        }
+
+        return createInternalAccountFromSpecificRequest(request, role);
+    }
+
 
     public UserResponse createAdminAccount(CreateRescueAccountRequest request) {
         return createInternalAccountFromSpecificRequest(request, UserRole.ADMIN);
@@ -171,6 +197,20 @@ public class AuthService {
                 .userId(user.getId())
                 .role(user.getRole())
                 .user(userDto)
+                .build();
+    }
+
+    public UserResponse getUserById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return UserResponse.builder()
+                .id(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .role(user.getRole())
+                .status(user.getStatus())
                 .build();
     }
 

@@ -5,6 +5,8 @@ import lombok.Data;
 
 @Data
 public class SupportAssignRequest {
-    @NotNull(message = "Assigned team/rescuer ID is required")
+    @NotNull(message = "Assigned team ID is required")
     private Long assignedTeamId;
+
+    private Long assignedRescueUserId;
 }

@@ -21,6 +21,8 @@ import IncidentReport from './pages/incident/IncidentReport';
 import ShelterList from './pages/shelter/ShelterList';
 import IncidentList from './pages/incident/IncidentList';
 import Profile from './pages/auth/Profile';
+import LeaderTeam from './pages/rescue/LeaderTeamPage';
+import LeaderRequests from './pages/leader/LeaderRequests';
 
 import MainLayout from './components/layout/MainLayout';
 
@@ -51,6 +53,10 @@ function App() {
             <Route path="/admin/shelters" element={<ProtectedRoute adminOnly><MainLayout title="Quản lý điểm trú ẩn"><ManageShelters /></MainLayout></ProtectedRoute>} />
             <Route path="/admin/incidents" element={<ProtectedRoute adminOnly><MainLayout title="Duyệt báo cáo sự cố"><IncidentManagement /></MainLayout></ProtectedRoute>} />
             <Route path="/admin/rescue-teams" element={<ProtectedRoute adminOnly><MainLayout title="Quản lý đội cứu hộ"><RescueTeamManagement /></MainLayout></ProtectedRoute>} />
+
+            {/* Leader Routes */}
+            <Route path="/leader/team" element={<ProtectedRoute><LeaderTeam /></ProtectedRoute>} />
+            <Route path="/leader/requests" element={<ProtectedRoute><LeaderRequests /></ProtectedRoute>} />
           </Routes>
         </MapProvider>
       </APIProvider>
