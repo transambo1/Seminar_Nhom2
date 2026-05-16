@@ -7,7 +7,7 @@ import {
   Minimize2,
   ClipboardList
 } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import '../../styles/CitizenDashboard.css';
 import MapView from "../../components/map/MapView";
 import { getActiveAlertsApi } from "../../api/alertApi";
@@ -21,7 +21,6 @@ import Topbar from "../../components/layout/Topbar";
 import { useMapState } from "../../context/MapContext";
 
 export default function CitizenDashboard() {
-  const navigate = useNavigate();
   const location = useLocation();
   const { 
     alerts, shelters, requests, updateMapData, isDataFresh
@@ -94,7 +93,15 @@ export default function CitizenDashboard() {
         if (location.state?.targetRequest) {
           const type = location.state.targetType || 'REQUEST';
           handleFocusItem(location.state.targetRequest, type);
-          // Clear state to prevent re-focus on refresh
+          window.history.replaceState({}, document.title);
+        } else if (location.state?.focusLat && location.state?.focusLng) {
+          // New logic for specific lat/lng focus (e.g. from Leader Team page)
+          const focusData = {
+            latitude: location.state.focusLat,
+            longitude: location.state.focusLng,
+            ...location.state.focusItem
+          };
+          handleFocusItem(focusData, location.state.focusItem?.type || 'RESCUE_TEAM');
           window.history.replaceState({}, document.title);
         }
       } catch (error) {

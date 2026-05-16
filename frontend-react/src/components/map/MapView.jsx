@@ -630,6 +630,35 @@ const MapView = ({
             destLng={routingDestination?.lng}
           />
 
+          {/* Special Focus Marker for Rescue Team */}
+          {selectedElement && selectedElement.elementType === 'RESCUE_TEAM' && (
+            <AdvancedMarker
+              position={{ 
+                lat: Number(selectedElement.latitude), 
+                lng: Number(selectedElement.longitude) 
+              }}
+              onClick={() => handleMarkerClick(selectedElement, 'RESCUE_TEAM')}
+            >
+               <div
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: '#2563EB',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '3px solid #fff',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.5)',
+                  fontSize: '20px'
+                }}
+              >
+                🛡️
+              </div>
+            </AdvancedMarker>
+          )}
+
           {myLocation && (
             <AdvancedMarker
               position={myLocation}
@@ -830,6 +859,20 @@ const MapView = ({
                         Đường đi
                       </button>
                     )}
+                  </div>
+                )}
+
+                {selectedElement.elementType === 'RESCUE_TEAM' && (
+                  <div>
+                    <strong style={{ color: '#2563EB' }}>
+                      ĐỘI CỨU HỘ: {selectedElement.name}
+                    </strong>
+                    <br />
+                    Khu vực: {selectedElement.area}
+                    <br />
+                    Hotline: {selectedElement.phone}
+                    <br />
+                    Vị trí: {selectedElement.latitude?.toFixed(5)}, {selectedElement.longitude?.toFixed(5)}
                   </div>
                 )}
               </div>

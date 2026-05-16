@@ -13,6 +13,7 @@ axiosClient.interceptors.request.use((config) => {
   if (userStr) {
       const user = JSON.parse(userStr);
       config.headers['X-User-Id'] = user.id;
+      config.headers['X-User-Role'] = user.role;
   }
   return config;
 });

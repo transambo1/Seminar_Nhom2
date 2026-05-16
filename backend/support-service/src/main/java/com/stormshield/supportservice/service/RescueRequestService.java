@@ -5,6 +5,7 @@ import com.stormshield.supportservice.dto.request.SupportAssignRequest;
 import com.stormshield.supportservice.dto.request.SupportCreateRequest;
 import com.stormshield.supportservice.dto.request.SupportRequestFilterRequest;
 import com.stormshield.supportservice.dto.request.SupportStatusUpdateRequest;
+import com.stormshield.supportservice.entity.AssignmentStatus;
 import com.stormshield.supportservice.entity.PriorityLevel;
 import com.stormshield.supportservice.entity.RequestStatus;
 import com.stormshield.supportservice.entity.RequestType;
@@ -26,6 +27,7 @@ public class RescueRequestService {
 
     private final RescueRequestRepository repository;
     private final NotificationEventPublisher eventPublisher;
+    private final RescueAutoAssignmentService autoAssignmentService;
 
     public RescueRequestResponse createRequest(SupportCreateRequest request) {
         RescueRequest rescueRequest = RescueRequest.builder()
@@ -39,6 +41,9 @@ public class RescueRequestService {
                 .status(RequestStatus.PENDING)
                 .build();
 
+        // Run auto assignment
+        autoAssignmentService.autoAssign(rescueRequest);
+
         RescueRequest saved = repository.save(rescueRequest);
         publishNotification(saved, "CREATED");
         return mapToResponse(saved);
@@ -51,6 +56,11 @@ public class RescueRequestService {
 
     public RescueRequestResponse getRequestById(Long id) {
         return mapToResponse(repository.findById(id).orElseThrow(() -> new RuntimeException("Request not found")));
+    }
+
+    public List<RescueRequestResponse> getRequestsByAssignedTeamId(Long teamId) {
+        return repository.findByAssignedTeamId(teamId)
+                .stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     public List<RescueRequestResponse> getAllRequests(RequestStatus status, PriorityLevel priority, RequestType type) {
@@ -72,15 +82,27 @@ public class RescueRequestService {
     public RescueRequestResponse assignTeam(Long id, SupportAssignRequest assignDto) {
         RescueRequest req = repository.findById(id).orElseThrow(() -> new RuntimeException("Request not found"));
 
-        if (req.getStatus() != RequestStatus.PENDING) {
-            throw new IllegalStateException("Can only assign a team to a PENDING request");
-        }
-
         req.setAssignedTeamId(assignDto.getAssignedTeamId());
+        req.setAssignedRescueUserId(assignDto.getAssignedRescueUserId());
         req.setStatus(RequestStatus.ASSIGNED);
+        
+        if (assignDto.getAssignedRescueUserId() != null) {
+            req.setAssignmentStatus(AssignmentStatus.MANUALLY_ASSIGNED);
+            req.setAssignmentReason("Đội trưởng đã phân công thành viên phụ trách");
+        } else {
+            req.setAssignmentStatus(AssignmentStatus.TEAM_ASSIGNED_NO_MEMBER);
+            req.setAssignmentReason("Phân công cho đội, đang chờ đội trưởng chỉ định thành viên");
+        }
 
         RescueRequest updated = repository.save(req);
         publishNotification(updated, "ASSIGNED");
+        return mapToResponse(updated);
+    }
+
+    public RescueRequestResponse manualAutoAssign(Long id) {
+        RescueRequest req = repository.findById(id).orElseThrow(() -> new RuntimeException("Request not found"));
+        autoAssignmentService.autoAssign(req);
+        RescueRequest updated = repository.save(req);
         return mapToResponse(updated);
     }
 
@@ -235,6 +257,10 @@ Double userLng = request.getUserLng();
                 .latitude(r.getLatitude()).longitude(r.getLongitude())
                 .priorityLevel(r.getPriorityLevel()).status(r.getStatus())
                 .assignedTeamId(r.getAssignedTeamId())
+                .assignedRescueUserId(r.getAssignedRescueUserId())
+                .assignmentStatus(r.getAssignmentStatus())
+                .assignmentReason(r.getAssignmentReason())
+                .distanceKm(r.getDistanceKm())
                 .createdAt(r.getCreatedAt()).updatedAt(r.getUpdatedAt())
                 .build();
     }

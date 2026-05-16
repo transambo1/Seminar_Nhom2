@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Phone, Users, Home, ChevronRight } from 'lucide-react';
+import { MapPin, Users, Home, ChevronRight } from 'lucide-react';
 
 const ShelterCard = ({ shelter, onClick }) => {
   const getStatusBadgeStyle = (status) => {

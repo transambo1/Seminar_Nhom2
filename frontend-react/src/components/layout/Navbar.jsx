@@ -31,7 +31,11 @@ const Navbar = () => {
   };
 
   const hideOnPaths = ['/dashboard', '/', '/request-list', '/shelters', '/incidents', '/notifications', '/profile'];
-  if (hideOnPaths.includes(location.pathname)) {
+  const isDashboardRoute = location.pathname.startsWith('/admin') || 
+                           location.pathname.startsWith('/leader') || 
+                           hideOnPaths.includes(location.pathname);
+
+  if (isDashboardRoute) {
     return null;
   }
 

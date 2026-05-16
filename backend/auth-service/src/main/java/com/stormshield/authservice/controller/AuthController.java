@@ -41,6 +41,12 @@ public class AuthController {
         return ResponseEntity.ok(authService.getCurrentUser(authentication.getName()));
     }
 
+    @GetMapping("/users/{id}")
+    @Operation(summary = "Get user info by ID")
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
+        return ResponseEntity.ok(authService.getUserById(id));
+    }
+
     @PostMapping("/internal/accounts")
     @Operation(summary = "Create internal accounts (RESCUE, ADMIN) - Admin only")
     public ResponseEntity<UserResponse> createInternalAccount(@Valid @RequestBody InternalAccountCreateRequest request) {
@@ -57,5 +63,11 @@ public class AuthController {
     @Operation(summary = "Create admin accounts - Admin only")
     public ResponseEntity<UserResponse> createAdminAccount(@Valid @RequestBody CreateRescueAccountRequest request) {
         return ResponseEntity.ok(authService.createAdminAccount(request));
+    }
+
+    @PostMapping("/leader/rescue-members")
+    @Operation(summary = "Create rescue members - Rescue Leader only")
+    public ResponseEntity<UserResponse> createRescueMember(@Valid @RequestBody CreateRescueAccountRequest request) {
+        return ResponseEntity.ok(authService.createRescueMember(request));
     }
 }
