@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { C } from '../src/constants/colors';
@@ -103,13 +103,13 @@ export default function ShelterNavigationScreen() {
         {/* Actions */}
         <View style={s.actions}>
           <TouchableOpacity style={s.navBtn} activeOpacity={0.85}>
-            <Text style={s.navBtnTxt}>▲  Start Navigation</Text>
+            <Text style={s.navBtnTxt}>▲  Bắt đầu đi đến</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.outlineBtn}>
-            <Text style={s.outlineBtnTxt}>📞  Call Shelter</Text>
+            <Text style={s.outlineBtnTxt}>📞 Điện thoại</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.outlineBtn}>
-            <Text style={s.outlineBtnTxt}>🔗  Share Location</Text>
+            <Text style={s.outlineBtnTxt}>🔗  Chia sẻ vị trí</Text>
           </TouchableOpacity>
         </View>
 

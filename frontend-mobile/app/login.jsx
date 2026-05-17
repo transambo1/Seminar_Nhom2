@@ -5,14 +5,13 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { C } from '../src/constants/colors';
-import * as SecureStore from 'expo-secure-store'; // 🟢 Dùng SecureStore cho đồng bộ
+import * as SecureStore from 'expo-secure-store'; 
 import apiClient from '../src/api/apiClient';
-
+import { authService } from '../src/api/authService';
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Thiếu thông tin", "Vui lòng nhập email và mật khẩu.");
@@ -21,32 +20,16 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      // 1. Gọi API Login
-      const res = await apiClient.post('/api/v1/auth/login', {
-        email: email,
-        password: password,
-      });
+      // Gọi service đã lưu role vào SecureStore [cite: 98, 163]
+      const userData = await authService.login(email, password);
 
-      // 2. Lấy Token và dữ liệu User từ AuthResponse
-      const { token, ...userProfile } = res.data;
-
-      if (token) {
-        // 🟢 LƯU ĐỒNG BỘ VÀO SECURESTORE (Giống hệt logic authService của bạn)
-        await SecureStore.setItemAsync('userToken', token);
-        
-        // Lưu cả cụm userProfile (bao gồm userId và object user: {fullName, phone...})
-        await SecureStore.setItemAsync('userProfile', JSON.stringify(userProfile));
-
-        // Lưu lẻ thêm cái userId để Inbox dễ lấy (tùy chọn)
-        await SecureStore.setItemAsync('userId', userProfile.userId.toString());
-
-        // 3. Chuyển hướng
+      if (userData && userData.token) {
+        // Dùng replace để không cho người dùng quay lại màn login bằng nút back [cite: 132]
         router.replace('/(tabs)');
       }
     } catch (error) {
       console.error("Login Error:", error);
-      const errorMsg = error.response?.data?.message || "Đăng nhập thất bại!";
-      Alert.alert("Lỗi bảo mật", errorMsg);
+      Alert.alert("Lỗi đăng nhập", error.toString());
     } finally {
       setLoading(false);
     }
@@ -56,13 +39,12 @@ export default function LoginScreen() {
     <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
         <View style={s.logoWrap}>
-          <View style={s.logoBox}><Text style={s.logoIcon}>🛡️</Text></View>
           <Text style={s.appName}>StormShield</Text>
-          <Text style={s.tagline}>Crisis-Response Professional</Text>
+          <Text style={s.tagline}>Thiên tai cứu hộ khẩn cáp</Text>
         </View>
 
         <View style={s.form}>
-          <Text style={s.label}>Email or Responder ID</Text>
+          <Text style={s.label}>Email</Text>
           <View style={s.inputWrap}>
             <Text style={s.inputIcon}>👤</Text>
             <TextInput
@@ -79,7 +61,7 @@ export default function LoginScreen() {
 
           <View style={s.row}>
             <Text style={s.label}>Security Credential</Text>
-            <Text style={s.forgot}>Forgot Access?</Text>
+            <Text style={s.forgot}>Quên mật khẩu</Text>
           </View>
           <View style={s.inputWrap}>
             <Text style={s.inputIcon}>🔒</Text>

@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
+
 import { C } from '../../src/constants/colors';
 import { fetchAllDisasterData, fetchInternalShelters } from '../../src/api/disasterApiService';
 import { MARKER_CONFIG, SEVERITY_CONFIG } from '../../src/constants/markerConfig';
@@ -256,7 +256,7 @@ function ShelterCard({ shelter, onClose }) {
 
       {/* 3. Nút điều hướng đã được cập nhật logic openNavigation */}
       <TouchableOpacity style={s.navBtn} onPress={openNavigation} activeOpacity={0.8}>
-        <Text style={s.navBtnTxt}>➤  Start Navigation</Text>
+        <Text style={s.navBtnTxt}>➤  Bắt đầu đi đến</Text>
       </TouchableOpacity>
     </>
   );

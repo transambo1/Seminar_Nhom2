@@ -8,15 +8,20 @@ export const authService = {
   login: async (email, password) => {
     try {
       const response = await apiClient.post(`${AUTH_URL}/login`, { email, password });
-      const { token, ...userProfile } = response.data;
+      
+      // Chú ý: Không dùng dấu : để khai báo kiểu ở đây
+      const { token, role, ...userProfile } = response.data;
 
-      // Lưu Token và Profile vào SecureStore
       if (token) {
         await SecureStore.setItemAsync('userToken', token);
+        // Lưu Role vào SecureStore để Layout check [cite: 174, 179]
+        await SecureStore.setItemAsync('userRole', role || 'ROLE_CITIZEN'); 
         await SecureStore.setItemAsync('userProfile', JSON.stringify(userProfile));
+        await SecureStore.setItemAsync('userId', userProfile.userId.toString());
       }
       return response.data;
     } catch (error) {
+      // Trả về message lỗi từ backend [cite: 100]
       throw error.response?.data?.message || 'Authentication failed';
     }
   },
@@ -24,12 +29,13 @@ export const authService = {
   // Đăng xuất
   logout: async () => {
     await SecureStore.deleteItemAsync('userToken');
+    await SecureStore.deleteItemAsync('userRole');
     await SecureStore.deleteItemAsync('userProfile');
+    await SecureStore.deleteItemAsync('userId');
   },
 
-  // Lấy thông tin User đã lưu
-  getCurrentUser: async () => {
-    const profile = await SecureStore.getItemAsync('userProfile');
-    return profile ? JSON.parse(profile) : null;
+  // Lấy Role để check điều hướng [cite: 174]
+  getUserRole: async () => {
+    return await SecureStore.getItemAsync('userRole');
   }
 };

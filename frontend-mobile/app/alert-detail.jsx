@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Linking, Image
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Linking
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { C } from '../src/constants/colors';

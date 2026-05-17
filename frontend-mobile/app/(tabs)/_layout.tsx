@@ -1,5 +1,7 @@
 import { Tabs } from 'expo-router';
-import { Platform, Text, View } from 'react-native';
+import { Platform, Text, View, ActivityIndicator } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import { useEffect, useState } from 'react';
 
 const PRIMARY = '#041525';
 const INACTIVE = '#94a3b8';
@@ -7,7 +9,6 @@ const INACTIVE = '#94a3b8';
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center', width: 64, paddingTop: 2 }}>
-      {/* Active indicator dot above icon */}
       <View style={{
         width: 20, height: 3, borderRadius: 2,
         backgroundColor: focused ? PRIMARY : 'transparent',
@@ -29,6 +30,33 @@ function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focu
 }
 
 export default function TabLayout() {
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const isUser = userRole?.includes('CITIZEN') || userRole?.includes('USER');
+  const isRescue = userRole?.includes('RESCUE') || userRole?.includes('ADMIN');
+  useEffect(() => {
+    async function loadRole() {
+      try {
+        const role = await SecureStore.getItemAsync('userRole');
+        console.log("DEBUG ROLE:", role); // Xem log ở terminal để biết role là gì
+        setUserRole(role);
+      } catch (e) {
+        console.error("Lỗi load role:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadRole();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color={PRIMARY} />
+      </View>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={{
@@ -36,40 +64,82 @@ export default function TabLayout() {
         tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e2e8f0',
           height: Platform.OS === 'ios' ? 90 : 70,
           paddingBottom: Platform.OS === 'ios' ? 28 : 10,
-          paddingTop: 0,
-          elevation: 16,
-          shadowColor: '#000',
-          shadowOpacity: 0.1,
-          shadowRadius: 16,
-          shadowOffset: { width: 0, height: -4 },
         },
-        tabBarActiveTintColor: PRIMARY,
-        tabBarInactiveTintColor: INACTIVE,
       }}
     >
+      {/* GIAO DIỆN USER */}
       <Tabs.Screen
         name="index"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="⚠️" label="Alerts" focused={focused} /> }}
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="⚠️" label="Alerts" focused={focused} />,
+          href: (isUser ? '/' : null) as any
+        }}
       />
       <Tabs.Screen
         name="shelters"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🗺️" label="Shelters" focused={focused} /> }}
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🗺️" label="Shelters" focused={focused} />,
+          href: (isUser ? '/shelters' : null) as any
+        }}
       />
       <Tabs.Screen
         name="report"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="📋" label="Report" focused={focused} /> }}
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📋" label="Report" focused={focused} />,
+          href: (isUser ? '/report' : null) as any
+        }}
       />
       <Tabs.Screen
         name="support"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🆘" label="Support" focused={focused} /> }}
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📋" label="suppport" focused={focused} />,
+          href: (isUser ? '/support' : null) as any
+        }}
       />
+
+      {/* --- NHÓM TAB CHO RESCUE --- */}
+      <Tabs.Screen name="RescueHome"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🚒" label="Home" focused={focused} />,
+          href: (isRescue ? '/RescueHome' : null) as any
+        }}
+      />
+
+      <Tabs.Screen
+        name="rescue-map"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🚒" label="Missions" focused={focused} />,
+          href: (isRescue ? '/rescue-map' : null) as any
+        }}
+      />
+
+      <Tabs.Screen
+        name="rescue-team"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🚒" label="Teamate" focused={focused} />,
+          href: (isRescue ? '/rescue-team' : null) as any
+        }}
+      />
+
+
+
+      {/* TAB CHUNG: Luôn hiện */}
       <Tabs.Screen
         name="inbox"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" label="Inbox" focused={focused} /> }}
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" label="Inbox" focused={focused} />,
+          href: '/inbox' as any
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" label="Profile" focused={focused} />,
+          href: '/profile' as any
+        }}
       />
     </Tabs>
   );

@@ -148,7 +148,7 @@ export default function DashboardScreen() {
           </View>
 
           <TouchableOpacity style={s.reportBtn} onPress={() => router.push('/(tabs)/report')} activeOpacity={0.85}>
-            <Text style={s.reportBtnText}>＋  Report Incident</Text>
+            <Text style={s.reportBtnText}>＋  Báo cáo sự cố</Text>
           </TouchableOpacity>
 
           <View style={s.bento}>
@@ -208,14 +208,14 @@ export default function DashboardScreen() {
 
         <View style={{ marginTop: 8 }}>
           <View style={s.feedHeader}>
-            <Text style={s.feedTitle}>Active Alerts Feed</Text>
+            <Text style={s.feedTitle}>Bảng tin cảnh báo</Text>
             {!loading && <Text style={s.feedCount}>{filteredData.length} matches</Text>}
           </View>
 
           {loading && rawMarkers.length === 0 && (
             <View style={s.loadingWrap}>
               <ActivityIndicator color={C.secondary} size="large" />
-              <Text style={s.loadingTxt}>Fetching live alerts…</Text>
+              <Text style={s.loadingTxt}>Đang tải…</Text>
             </View>
           )}
 

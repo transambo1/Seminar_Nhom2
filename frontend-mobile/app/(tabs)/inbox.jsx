@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView,
   ActivityIndicator, RefreshControl, Alert
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import apiClient from '../../src/api/apiClient';
 import { C } from '../../src/constants/colors';
 import * as SecureStore from 'expo-secure-store';
