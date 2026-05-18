@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 
 // Thay đổi IP này thành IP máy tính của bạn nếu dùng máy thật
 // 10.0.2.2 là địa chỉ mặc định để Android Emulator truy cập localhost
-const BASE_URL = 'http://192.168.11.31:8080'; 
+const BASE_URL = 'http://192.168.1.44:8080'; 
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

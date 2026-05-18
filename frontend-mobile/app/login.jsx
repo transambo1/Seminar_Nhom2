@@ -27,10 +27,12 @@ export default function LoginScreen() {
         // Dùng replace để không cho người dùng quay lại màn login bằng nút back [cite: 132]
         router.replace('/(tabs)');
       }
-    } catch (error) {
-      console.error("Login Error:", error);
-      Alert.alert("Lỗi đăng nhập", error.toString());
-    } finally {
+   } catch (error) {
+  // 1. In toàn bộ object error ra Terminal máy tính để xem kĩ
+  console.error("Chi tiết lỗi Đăng nhập:", error.response?.data || error.message || error);
+  
+  Alert.alert("Lỗi đăng nhập", error.toString());
+} finally {
       setLoading(false);
     }
   };

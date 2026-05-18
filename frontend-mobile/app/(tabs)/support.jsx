@@ -6,11 +6,11 @@ import {
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { C } from '../../src/constants/colors';
 import apiClient from '../../src/api/apiClient';
 
-// 1. Cập nhật đúng Enum RequestType từ Backend
+// Enum RequestType từ Backend
 const SUPPORT_TYPES = [
   { id: 'MEDICAL', label: 'Medical', emoji: '🏥' },
   { id: 'FOOD', label: 'Food', emoji: '🍞' },
@@ -24,7 +24,7 @@ const PRIORITIES = [
   { id: 'NORMAL', label: 'Normal' }
 ];
 
-// 2. Component Mini Map đã fix lỗi "Missing display name" và "Unexpected token"
+// Component Mini Map hiển thị vị trí hiện tại
 const SupportMiniMap = React.memo(function SupportMiniMapComponent({ coordinate }) {
   return (
     <View style={s.mapMini}>
@@ -47,10 +47,7 @@ const SupportMiniMap = React.memo(function SupportMiniMapComponent({ coordinate 
         rotateEnabled={false}
         scrollEnabled={false}
       >
-        <Marker coordinate={{
-          latitude: coordinate.latitude,
-          longitude: coordinate.longitude,
-        }}>
+        <Marker coordinate={coordinate}>
           <View style={s.mapDot} />
         </Marker>
       </MapView>
@@ -70,24 +67,43 @@ export default function SupportScreen() {
   const [description, setDescription] = useState('');
   const [numPeople, setNumPeople] = useState('1');
   const [recentRequests, setRecentRequests] = useState([]);
+  const [userId, setUserId] = useState(1); // Mặc định cho Trần Lâm Thành
   
   const [coordinate, setCoordinate] = useState({ latitude: 10.7626, longitude: 106.6601 });
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Lấy userId mặc định từ profile Trần Lâm Thành
-  const currentUserId = 1; 
-
   useEffect(() => {
-    handleAutoDetect();
-    fetchMyRequests();
+    async function init() {
+      // Lấy ID người dùng thực tế từ Profile
+      const profileStr = await SecureStore.getItemAsync('userProfile');
+      if (profileStr) {
+        const profile = JSON.parse(profileStr);
+        setUserId(profile.userId);
+      }
+      handleAutoDetect();
+      fetchMyRequests();
+    }
+    init();
   }, []);
 
+  // Lấy danh sách yêu cầu và lọc bỏ RESOLVED/COMPLETED
   const fetchMyRequests = async () => {
     try {
-      const res = await apiClient.get('/api/v1/support-requests/my');
-      setRecentRequests(res.data.slice(0, 3));
-    } catch (e) { console.warn(e); }
+      // Backend dùng X-User-Id để xác định "của tôi"
+      const res = await apiClient.get('/api/v1/support-requests/my', {
+        headers: { 'X-User-Id': userId }
+      });
+
+      // 🟢 Lọc: Chỉ giữ lại các yêu cầu đang hoạt động (PENDING, ASSIGNED, IN_PROGRESS)
+      const activeRequests = res.data.filter(req => 
+        req.status !== 'RESOLVED' && req.status !== 'COMPLETED'
+      );
+      
+      setRecentRequests(activeRequests.slice(0, 3));
+    } catch (e) {
+      console.warn("Lỗi tải yêu cầu gần đây:", e.message);
+    }
   };
 
   const handleAutoDetect = async () => {
@@ -109,7 +125,7 @@ export default function SupportScreen() {
 
   const handleSubmit = async () => {
     if (!supportType || !description) {
-      Alert.alert('Missing Info', 'Please select support type and describe your situation.');
+      Alert.alert('Thiếu thông tin', 'Vui lòng chọn loại cứu trợ và mô tả tình huống.');
       return;
     }
 
@@ -117,7 +133,7 @@ export default function SupportScreen() {
     try {
       // Payload khớp hoàn toàn với SupportCreateRequest.java
       const payload = {
-        userId: currentUserId,
+        userId: userId,
         requestType: supportType,
         description: description.trim(),
         numberOfPeople: parseInt(numPeople) || 1,
@@ -129,13 +145,13 @@ export default function SupportScreen() {
       const response = await apiClient.post('/api/v1/support-requests', payload);
 
       if (response.status === 201 || response.status === 200) {
-        Alert.alert('🆘 Success', 'Emergency request submitted. Stay safe.');
+        Alert.alert('🆘 Thành công', 'Yêu cầu cứu hộ đã được gửi đi.');
         setDescription('');
         setSupportType(null);
-        fetchMyRequests();
+        fetchMyRequests(); // Tải lại danh sách sau khi gửi
       }
     } catch (error) {
-      Alert.alert('Error', 'Could not submit request. Check server connection.');
+      Alert.alert('Lỗi', 'Không thể gửi yêu cầu. Vui lòng kiểm tra kết nối.');
     } finally {
       setSubmitting(false);
     }
@@ -155,13 +171,12 @@ export default function SupportScreen() {
             <Text style={s.emergencyIcon}>🚨</Text>
             <View style={{ flex: 1 }}>
               <Text style={s.emergencyTitle}>Life-Threatening Emergency?</Text>
-              <Text style={s.emergencyDesc}>Gọi ngay 113, 114 hoặc 115 nếu đang gặp nguy hiểm trực tiếp.</Text>
+              <Text style={s.emergencyDesc}>Gọi 114 nếu gặp nguy hiểm trực tiếp.</Text>
             </View>
           </View>
 
           <View style={s.card}>
-            <Text style={s.cardTitle}>Type of Support</Text>
-            {/* 🟢 Bố cục 2:2 Grid */}
+            <Text style={s.cardTitle}>Loại hình cứu trợ</Text>
             <View style={s.typeGrid}>
               {SUPPORT_TYPES.map(t => (
                 <TouchableOpacity
@@ -177,7 +192,7 @@ export default function SupportScreen() {
           </View>
 
           <View style={s.card}>
-            <Text style={s.cardTitle}>Priority Level</Text>
+            <Text style={s.cardTitle}>Mức độ ưu tiên</Text>
             <View style={s.priorityRow}>
               {PRIORITIES.map(p => (
                 <TouchableOpacity
@@ -192,9 +207,9 @@ export default function SupportScreen() {
           </View>
 
           <View style={s.card}>
-            <Text style={s.cardTitle}>Number of People</Text>
+            <Text style={s.cardTitle}>Số lượng người</Text>
             <TextInput style={s.inputSmall} keyboardType="numeric" value={numPeople} onChangeText={setNumPeople} />
-            <Text style={[s.cardTitle, { marginTop: 16 }]}>Location</Text>
+            <Text style={[s.cardTitle, { marginTop: 16 }]}>Vị trí</Text>
             <View style={s.locRow}>
               <TextInput style={s.locInput} value={locationName} editable={false} />
               <TouchableOpacity style={s.autoBtn} onPress={handleAutoDetect}><Text style={s.autoBtnTxt}>📍 Reset</Text></TouchableOpacity>
@@ -203,21 +218,22 @@ export default function SupportScreen() {
           </View>
 
           <View style={s.card}>
-            <Text style={s.cardTitle}>Description</Text>
-            <TextInput style={[s.input, s.textarea]} multiline value={description} onChangeText={setDescription} placeholder="Describe your needs..." />
+            <Text style={s.cardTitle}>Mô tả tình hình</Text>
+            <TextInput style={[s.input, s.textarea]} multiline value={description} onChangeText={setDescription} placeholder="Cần hỗ trợ cụ thể về..." />
           </View>
 
           <TouchableOpacity style={s.submitBtn} onPress={handleSubmit} disabled={submitting}>
-            {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.submitTxt}>➤  SUBMIT REQUEST</Text>}
+            {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.submitTxt}>➤   GỬI YÊU CẦU</Text>}
           </TouchableOpacity>
 
+          {/* Chỉ hiện các yêu cầu đang Active */}
           {recentRequests.length > 0 && (
             <View style={s.card}>
-              <Text style={s.cardTitle}>Recent Activity</Text>
+              <Text style={s.cardTitle}>Yêu cầu đang chờ xử lý</Text>
               {recentRequests.map(req => (
                 <View key={req.id} style={s.activityItem}>
                   <View style={s.actRow}>
-                    <View style={[s.actDot, { backgroundColor: req.status === 'PENDING' ? '#f59e0b' : '#16a34a' }]} />
+                    <View style={[s.actDot, { backgroundColor: req.status === 'PENDING' ? '#f59e0b' : '#3b82f6' }]} />
                     <Text style={s.actStatus}>{req.status}</Text>
                   </View>
                   <Text style={s.actTitle}>{req.requestType}</Text>
@@ -271,7 +287,6 @@ const s = StyleSheet.create({
   actRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actDot: { width: 8, height: 8, borderRadius: 4 },
   actStatus: { fontSize: 10, fontWeight: '800' },
-  actTime: { fontSize: 11, color: C.onSurfaceVariant, marginLeft: 'auto' },
   actTitle: { fontSize: 15, fontWeight: '700', marginTop: 4 },
   actDesc: { fontSize: 13, color: C.onSurfaceVariant },
 });

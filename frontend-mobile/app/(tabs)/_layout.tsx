@@ -99,6 +99,14 @@ export default function TabLayout() {
         }}
       />
 
+{/* TAB CHUNG: Luôn hiện */}
+      <Tabs.Screen
+        name="inbox"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" label="Inbox" focused={focused} />,
+          href: (isUser ? '/inbox' : null) as any
+        }}
+      />
       {/* --- NHÓM TAB CHO RESCUE --- */}
       <Tabs.Screen name="RescueHome"
         options={{
@@ -125,14 +133,7 @@ export default function TabLayout() {
 
 
 
-      {/* TAB CHUNG: Luôn hiện */}
-      <Tabs.Screen
-        name="inbox"
-        options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" label="Inbox" focused={focused} />,
-          href: '/inbox' as any
-        }}
-      />
+      
 
       <Tabs.Screen
         name="profile"
