@@ -13,7 +13,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="alert-detail" options={{ presentation: 'card' }} />
         <Stack.Screen name="shelter-navigation" options={{ presentation: 'card' }} />
-        <Stack.Screen name="disaster-map" options={{ presentation: 'card' }} />
+ 
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

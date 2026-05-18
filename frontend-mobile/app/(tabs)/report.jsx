@@ -68,7 +68,13 @@ export default function ReportScreen() {
     });
     if (!result.canceled) setImage(result.assets[0].uri);
   };
-
+const resetForm = () => {
+  setTitle('');
+  setDescription('');
+  setSelectedType(null);
+  setSeverity('MEDIUM');
+  setImage(null);
+};
   const handleSubmit = async () => {
     if (!title || !description || !selectedType) {
       Alert.alert('Thiếu thông tin', 'Vui lòng điền tiêu đề, mô tả và chọn loại sự cố.');
@@ -93,6 +99,7 @@ export default function ReportScreen() {
       const response = await apiClient.post('/api/v1/incident-reports', payload);
 
       if (response.status === 201 || response.status === 200) {
+        resetForm();
         Alert.alert('Thành công', 'Báo cáo đã được gửi và chờ phê duyệt.', [
           { text: 'Xong', onPress: () => router.replace('/(tabs)') }
         ]);
