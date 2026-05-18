@@ -30,3 +30,12 @@ The system automatically bootstraps a default administrator account on startup i
 
 > [!NOTE]
 > The password is securely stored using **BCrypt** hashing. This account is intended for initial configuration and demonstration purposes.
+
+## Documentation
+
+The repository contains several key documentation files for the project.
+
+- [Agent Reports](docs/agent-reports/): Contains detailed `api_endpoints_report.md` and `entities_report.md`.
+- [Demo Guides](docs/demo/): Refer to `weather_alert_demo_guide.md` for running the automated weather integration demo.
+- [Testing](docs/testing/): See `StormShield_TestCases.csv` for the complete list of system test cases.
+- [Guidelines](GEMINI.md): Read the guidelines for AI agents working on this project.

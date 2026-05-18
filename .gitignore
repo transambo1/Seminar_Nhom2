@@ -1,7 +1,24 @@
 _git_recovery_backup_untracked/
 
+node_modules/
+dist/
+build/
+target/
+
+.env
+.env.*
+
+logs/
+*.log
+
+.DS_Store
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+backend/**/target/
 frontend-react/node_modules/
 frontend-react/node_modules/.cache/
 frontend-react/build/
-
-backend/**/target/
+frontend-mobile/node_modules/
